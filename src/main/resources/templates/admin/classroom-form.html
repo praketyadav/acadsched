@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Classroom Form - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/admin/classrooms}" class="active">Classrooms</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 th:text="${classroom.id == null ? 'Add New Classroom' : 'Edit Classroom'}"></h1>
+
+        <div style="max-width: 600px; margin: 24px auto; background: var(--bg-card); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <form th:action="${classroom.id == null ? '/admin/classrooms/new' : '/admin/classrooms/' + classroom.id + '/edit'}" 
+                  th:object="${classroom}" method="post">
+                
+                <div class="form-group">
+                    <label for="roomNumber">Room Number *</label>
+                    <input type="text" id="roomNumber" th:field="*{roomNumber}" required placeholder="e.g., A-101">
+                </div>
+
+                <div class="form-group">
+                    <label for="building">Building *</label>
+                    <input type="text" id="building" th:field="*{building}" required placeholder="e.g., Science Block">
+                </div>
+
+                <div class="form-group">
+                    <label for="capacity">Capacity *</label>
+                    <input type="number" id="capacity" th:field="*{capacity}" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Room Type *</label>
+                    <select id="type" th:field="*{type}" required>
+                        <option value="">Select Type</option>
+                        <option value="LECTURE_HALL">Lecture Hall</option>
+                        <option value="LABORATORY">Laboratory</option>
+                        <option value="SEMINAR_ROOM">Seminar Room</option>
+                        <option value="TUTORIAL_ROOM">Tutorial Room</option>
+                        <option value="AUDITORIUM">Auditorium</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="equipment">Equipment</label>
+                    <input type="text" id="equipment" th:field="*{equipment}" placeholder="e.g., Projector, Smart Board">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" th:field="*{available}"> Available for Use
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Save Classroom</button>
+            </form>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <a th:href="@{/admin/classrooms}"><i class="ph ph-arrow-left"></i> Back to Classroom List</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

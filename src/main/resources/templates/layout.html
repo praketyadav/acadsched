@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} ?: 'AcadSched - Academic Scheduling System'">AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li sec:authorize="isAuthenticated()">
+                    <a th:href="@{/dashboard}">Dashboard</a>
+                </li>
+                <li sec:authorize="hasAnyRole('ADMIN', 'FACULTY')">
+                    <a th:href="@{/timetable}">Timetable</a>
+                </li>
+                <li sec:authorize="isAuthenticated()">
+                    <a th:href="@{/events}">Events</a>
+                </li>
+                <li sec:authorize="hasAnyRole('ADMIN', 'STUDENT')">
+                    <a th:href="@{/grievances}">Grievances</a>
+                </li>
+                <li sec:authorize="!isAuthenticated()">
+                    <a th:href="@{/login}">Login</a>
+                </li>
+                <li sec:authorize="!isAuthenticated()">
+                    <a th:href="@{/register}">Register</a>
+                </li>
+                <li sec:authorize="isAuthenticated()">
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+        
+        <div th:replace="${content}"></div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

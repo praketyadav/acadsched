@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Event - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/events}" class="active">Events</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-plus-circle"></i> Create New Event</h1>
+
+        <div style="max-width: 600px; margin: 24px auto; background: var(--bg-card); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <form th:action="@{/events/new}" th:object="${event}" method="post">
+                
+                <div class="form-group">
+                    <label for="title">Event Title *</label>
+                    <input type="text" id="title" th:field="*{title}" required placeholder="Enter event title">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <textarea id="description" th:field="*{description}" rows="4" required placeholder="Describe the event"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventDate">Event Date &amp; Time *</label>
+                    <input type="datetime-local" id="eventDate" th:field="*{eventDate}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="venue">Venue *</label>
+                    <input type="text" id="venue" th:field="*{venue}" required placeholder="Enter venue">
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Event Type *</label>
+                    <select id="type" th:field="*{type}" required>
+                        <option value="">Select Type</option>
+                        <option value="ACADEMIC">Academic</option>
+                        <option value="CULTURAL">Cultural</option>
+                        <option value="SPORTS">Sports</option>
+                        <option value="TECHNICAL">Technical</option>
+                        <option value="WORKSHOP">Workshop</option>
+                        <option value="SEMINAR">Seminar</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" th:field="*{published}"> Publish Event
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Create Event</button>
+            </form>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <a th:href="@{/events}"><i class="ph ph-arrow-left"></i> Back to Events</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

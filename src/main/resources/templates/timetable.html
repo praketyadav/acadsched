@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/timetable}" class="active">Timetable</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/faculty}">Manage</a></li>
+                <li><a th:href="@{/events}">Events</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-calendar-check"></i> Academic Timetable</h1>
+
+        <!-- Success/Error Messages -->
+        <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <!-- Action Buttons -->
+        <div style="margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+            <a th:href="@{/timetable/generate}" class="btn btn-primary" sec:authorize="hasAnyRole('ADMIN', 'FACULTY')">
+                <i class="ph ph-lightning"></i> Generate New Timetable
+            </a>
+            <button onclick="window.print()" class="btn btn-secondary"><i class="ph ph-printer"></i> Print Timetable</button>
+            <button onclick="exportTimetable()" class="btn btn-secondary"><i class="ph ph-download-simple"></i> Export</button>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <h3 style="margin-bottom: 15px;"><i class="ph ph-magnifying-glass"></i> Filter Timetable</h3>
+            <form th:action="@{/timetable/view}" method="get">
+                <div class="form-group">
+                    <label for="semester">Semester</label>
+                    <input type="text" id="semester" name="semester" 
+                           th:value="${semester}" placeholder="e.g., Fall 2024" required>
+                </div>
+                <div class="form-group">
+                    <label for="section">Section</label>
+                    <input type="text" id="section" name="section" 
+                           th:value="${section}" placeholder="e.g., A" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary" style="margin-top: 24px;">View Timetable</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Timetable Display -->
+        <div th:if="${schedule != null and !schedule.isEmpty()}" class="timetable-grid">
+            <h2 style="padding: 20px; margin: 0; background: var(--bg-elevated); border-bottom: 1px solid var(--border);" th:if="${semester and section}">
+                Timetable: <span th:text="${semester}"></span> - Section <span th:text="${section}"></span>
+            </h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Time</th>
+                        <th>Monday</th>
+                        <th>Tuesday</th>
+                        <th>Wednesday</th>
+                        <th>Thursday</th>
+                        <th>Friday</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="timeSlot : ${'09:00-10:00,10:00-11:00,11:00-12:00,12:00-13:00,14:00-15:00,15:00-16:00,16:00-17:00'.split(',')}">
+                        <td class="time-column" th:text="${timeSlot}">09:00-10:00</td>
+                        
+                        <!-- Monday -->
+                        <td>
+                            <div th:each="entry : ${schedule}" 
+                                 th:if="${entry.dayOfWeek == 'MONDAY' and entry.timeSlot == timeSlot}">
+                                <div class="class-slot">
+                                    <div class="subject-name" th:text="${entry.subject.name}">Subject Name</div>
+                                    <div class="details">
+                                        <i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}">Faculty</span><br>
+                                        <i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}">Room</span><br>
+                                        <i class="ph ph-book-open"></i> <span th:text="${entry.subject.subjectCode}">Code</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span th:if="${#lists.isEmpty(schedule.?[dayOfWeek == 'MONDAY' and timeSlot == timeSlot])}" 
+                                  class="empty-slot">—</span>
+                        </td>
+                        
+                        <!-- Tuesday -->
+                        <td>
+                            <div th:each="entry : ${schedule}" 
+                                 th:if="${entry.dayOfWeek == 'TUESDAY' and entry.timeSlot == timeSlot}">
+                                <div class="class-slot">
+                                    <div class="subject-name" th:text="${entry.subject.name}">Subject Name</div>
+                                    <div class="details">
+                                        <i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}">Faculty</span><br>
+                                        <i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}">Room</span><br>
+                                        <i class="ph ph-book-open"></i> <span th:text="${entry.subject.subjectCode}">Code</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span th:if="${#lists.isEmpty(schedule.?[dayOfWeek == 'TUESDAY' and timeSlot == timeSlot])}" 
+                                  class="empty-slot">—</span>
+                        </td>
+                        
+                        <!-- Wednesday -->
+                        <td>
+                            <div th:each="entry : ${schedule}" 
+                                 th:if="${entry.dayOfWeek == 'WEDNESDAY' and entry.timeSlot == timeSlot}">
+                                <div class="class-slot">
+                                    <div class="subject-name" th:text="${entry.subject.name}">Subject Name</div>
+                                    <div class="details">
+                                        <i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}">Faculty</span><br>
+                                        <i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}">Room</span><br>
+                                        <i class="ph ph-book-open"></i> <span th:text="${entry.subject.subjectCode}">Code</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span th:if="${#lists.isEmpty(schedule.?[dayOfWeek == 'WEDNESDAY' and timeSlot == timeSlot])}" 
+                                  class="empty-slot">—</span>
+                        </td>
+                        
+                        <!-- Thursday -->
+                        <td>
+                            <div th:each="entry : ${schedule}" 
+                                 th:if="${entry.dayOfWeek == 'THURSDAY' and entry.timeSlot == timeSlot}">
+                                <div class="class-slot">
+                                    <div class="subject-name" th:text="${entry.subject.name}">Subject Name</div>
+                                    <div class="details">
+                                        <i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}">Faculty</span><br>
+                                        <i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}">Room</span><br>
+                                        <i class="ph ph-book-open"></i> <span th:text="${entry.subject.subjectCode}">Code</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span th:if="${#lists.isEmpty(schedule.?[dayOfWeek == 'THURSDAY' and timeSlot == timeSlot])}" 
+                                  class="empty-slot">—</span>
+                        </td>
+                        
+                        <!-- Friday -->
+                        <td>
+                            <div th:each="entry : ${schedule}" 
+                                 th:if="${entry.dayOfWeek == 'FRIDAY' and entry.timeSlot == timeSlot}">
+                                <div class="class-slot">
+                                    <div class="subject-name" th:text="${entry.subject.name}">Subject Name</div>
+                                    <div class="details">
+                                        <i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}">Faculty</span><br>
+                                        <i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}">Room</span><br>
+                                        <i class="ph ph-book-open"></i> <span th:text="${entry.subject.subjectCode}">Code</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span th:if="${#lists.isEmpty(schedule.?[dayOfWeek == 'FRIDAY' and timeSlot == timeSlot])}" 
+                                  class="empty-slot">—</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty State -->
+        <div th:if="${schedule == null or schedule.isEmpty()}" style="text-align: center; padding: 60px 20px;">
+            <div style="font-size: 4rem; margin-bottom: 20px; color: var(--text-muted);"><i class="ph ph-calendar-blank"></i></div>
+            <h2>No Timetable Available</h2>
+            <p style="color: var(--text-secondary); margin: 20px 0;">Generate a new timetable or select a semester and section to view.</p>
+            <a th:href="@{/timetable/generate}" class="btn btn-primary" sec:authorize="hasAnyRole('ADMIN', 'FACULTY')">
+                Generate Timetable
+            </a>
+        </div>
+
+        <!-- Legend -->
+        <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius); margin-top: 20px; border: 1px solid var(--border);">
+            <h3><i class="ph ph-book-open"></i> Legend</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; color: var(--text-secondary);">
+                <div><i class="ph ph-chalkboard-teacher"></i> Faculty Member</div>
+                <div><i class="ph ph-buildings"></i> Classroom/Room</div>
+                <div><i class="ph ph-book-open"></i> Subject Code</div>
+                <div><i class="ph ph-clock"></i> Time Slot</div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function exportTimetable() {
+            alert('Export functionality coming soon! Currently you can print the timetable.');
+        }
+    </script>
+</body>
+</html>

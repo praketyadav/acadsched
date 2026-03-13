@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Subject Form - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/admin/subjects}" class="active">Subjects</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 th:text="${subject.id == null ? 'Add New Subject' : 'Edit Subject'}"></h1>
+
+        <div style="max-width: 600px; margin: 24px auto; background: var(--bg-card); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <form th:action="${subject.id == null ? '/admin/subjects/new' : '/admin/subjects/' + subject.id + '/edit'}" 
+                  th:object="${subject}" method="post">
+                
+                <div class="form-group">
+                    <label for="subjectCode">Subject Code *</label>
+                    <input type="text" id="subjectCode" th:field="*{subjectCode}" required placeholder="e.g., CS101">
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Subject Name *</label>
+                    <input type="text" id="name" th:field="*{name}" required placeholder="e.g., Data Structures">
+                </div>
+
+                <div class="form-group">
+                    <label for="credits">Credits *</label>
+                    <input type="number" id="credits" th:field="*{credits}" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="department">Department *</label>
+                    <input type="text" id="department" th:field="*{department}" required placeholder="e.g., Computer Science">
+                </div>
+
+                <div class="form-group">
+                    <label for="semester">Semester *</label>
+                    <input type="text" id="semester" th:field="*{semester}" placeholder="e.g., Fall 2024" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="faculty">Assign Faculty</label>
+                    <select id="faculty" th:field="*{faculty}">
+                        <option value="">Select Faculty</option>
+                        <option th:each="f : ${faculties}" th:value="${f.id}" th:text="${f.name}"></option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority">Priority (1-10)</label>
+                    <input type="number" id="priority" th:field="*{priority}" min="1" max="10" value="5">
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Type *</label>
+                    <select id="type" th:field="*{type}" required>
+                        <option value="">Select Type</option>
+                        <option value="THEORY">Theory</option>
+                        <option value="PRACTICAL">Practical</option>
+                        <option value="TUTORIAL">Tutorial</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Save Subject</button>
+            </form>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <a th:href="@{/admin/subjects}"><i class="ph ph-arrow-left"></i> Back to Subject List</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

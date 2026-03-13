@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AcadSched - Smart Academic Scheduling System</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-content">
+            <div>
+                <h1>Smart Academic <span class="accent">Scheduling</span>, Simplified.</h1>
+                <div class="hero-buttons">
+                    <a th:href="@{/login}" class="btn btn-primary">Get Started</a>
+                    <a th:href="@{/register}" class="btn btn-secondary">Register</a>
+                </div>
+            </div>
+            <div>
+                <p class="hero-subtitle">Automate your academic timetable generation, manage campus resources, and streamline event coordination — all in one platform.</p>
+                <p class="hero-description">Built with a priority-based constraint scheduling algorithm for conflict-free timetables, real-time rescheduling, and integrated grievance analytics.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="features">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <i class="ph ph-calendar-check feature-icon"></i>
+                    <h3>Automated Scheduling</h3>
+                    <p>Priority-based constraint scheduling algorithm for conflict-free timetables</p>
+                </div>
+                <div class="feature-card">
+                    <i class="ph ph-chalkboard-teacher feature-icon"></i>
+                    <h3>Faculty Management</h3>
+                    <p>Track faculty availability and assign courses efficiently</p>
+                </div>
+                <div class="feature-card">
+                    <i class="ph ph-buildings feature-icon"></i>
+                    <h3>Classroom Allocation</h3>
+                    <p>Optimize classroom utilization based on capacity and requirements</p>
+                </div>
+                <div class="feature-card">
+                    <i class="ph ph-megaphone feature-icon"></i>
+                    <h3>Event Management</h3>
+                    <p>Centralized platform for campus event registration and publishing</p>
+                </div>
+                <div class="feature-card">
+                    <i class="ph ph-chat-centered-dots feature-icon"></i>
+                    <h3>Grievance Analytics</h3>
+                    <p>Track and analyze student grievances for better administration</p>
+                </div>
+                <div class="feature-card">
+                    <i class="ph ph-arrows-clockwise feature-icon"></i>
+                    <h3>Dynamic Rescheduling</h3>
+                    <p>Handle schedule changes due to faculty leave or room unavailability</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

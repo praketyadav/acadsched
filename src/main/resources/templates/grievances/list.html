@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Grievances - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/grievances}" class="active">Grievances</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/grievances/analytics}">Analytics</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-chat-centered-dots"></i> Grievances</h1>
+
+        <div style="margin: 20px 0;">
+            <a th:href="@{/grievances/new}" class="btn btn-primary"><i class="ph ph-plus"></i> Submit New Grievance</a>
+        </div>
+
+        <div th:if="${grievances != null and !grievances.isEmpty()}">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th sec:authorize="hasRole('ADMIN')">Student</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="grievance : ${grievances}">
+                        <td th:text="${grievance.id}"></td>
+                        <td th:text="${grievance.title}"></td>
+                        <td th:text="${grievance.category}"></td>
+                        <td sec:authorize="hasRole('ADMIN')" th:text="${grievance.student.fullName}"></td>
+                        <td>
+                            <span class="status-badge" th:classappend="'status-' + ${grievance.status}" 
+                                  th:text="${grievance.status}"></span>
+                        </td>
+                        <td th:text="${#temporals.format(grievance.createdAt, 'yyyy-MM-dd')}"></td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" 
+                                    th:onclick="'showDetails(' + ${grievance.id} + ')'">View</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${grievances == null or grievances.isEmpty()}" style="text-align: center; padding: 40px;">
+            <p style="color: var(--text-secondary);">No grievances found.</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Details - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/events}" class="active">Events</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="max-width: 800px; margin: 0 auto; background: var(--bg-card); padding: 40px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <h1 th:text="${event.title}"></h1>
+            
+            <div style="margin: 24px 0;">
+                <p style="margin: 10px 0; color: var(--text-secondary);"><i class="ph ph-calendar" style="color: var(--accent);"></i> <strong style="color: var(--text-primary);">Date &amp; Time:</strong> <span th:text="${#temporals.format(event.eventDate, 'EEEE, MMMM dd, yyyy HH:mm')}"></span></p>
+                <p style="margin: 10px 0; color: var(--text-secondary);"><i class="ph ph-map-pin" style="color: var(--accent);"></i> <strong style="color: var(--text-primary);">Venue:</strong> <span th:text="${event.venue}"></span></p>
+                <p style="margin: 10px 0; color: var(--text-secondary);"><i class="ph ph-tag" style="color: var(--accent);"></i> <strong style="color: var(--text-primary);">Type:</strong> <span th:text="${event.type}"></span></p>
+                <p style="margin: 10px 0; color: var(--text-secondary);"><i class="ph ph-user" style="color: var(--accent);"></i> <strong style="color: var(--text-primary);">Organized by:</strong> <span th:text="${event.organizer.fullName}"></span></p>
+            </div>
+
+            <div style="margin: 30px 0;">
+                <h3>Description</h3>
+                <p th:text="${event.description}" style="color: var(--text-secondary); line-height: 1.7; margin-top: 8px;"></p>
+            </div>
+
+            <div style="margin-top: 30px; display: flex; gap: 12px;">
+                <a th:href="@{/events}" class="btn btn-secondary"><i class="ph ph-arrow-left"></i> Back to Events</a>
+                <a th:if="${#authorization.expression('hasRole(''ADMIN'')')}" 
+                   th:href="@{/events/{id}/edit(id=${event.id})}" 
+                   class="btn btn-primary"><i class="ph ph-pencil-simple"></i> Edit Event</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Generate Timetable - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/timetable}" class="active">Timetable</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-lightning"></i> Generate Timetable</h1>
+
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <div style="max-width: 500px; margin: 24px auto; background: var(--bg-card); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <form th:action="@{/timetable/generate}" method="post">
+                <div class="form-group">
+                    <label for="semester">Semester</label>
+                    <input type="text" id="semester" name="semester" placeholder="e.g., Fall 2024" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="section">Section</label>
+                    <input type="text" id="section" name="section" placeholder="e.g., A" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block"><i class="ph ph-lightning"></i> Generate Timetable</button>
+            </form>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <a th:href="@{/timetable}"><i class="ph ph-arrow-left"></i> Back to Timetable</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

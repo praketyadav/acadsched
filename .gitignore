@@ -1,0 +1,28 @@
+# Build
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Maven
+.mvn/
+
+# H2 Database
+*.mv.db
+*.trace.db
+*.db.lock
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gemini
+.gemini/

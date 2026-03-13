@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Events - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/events}" class="active">Events</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-megaphone"></i> Campus Events</h1>
+
+        <div style="margin: 20px 0;">
+            <a th:href="@{/events/new}" class="btn btn-primary"><i class="ph ph-plus"></i> Create New Event</a>
+        </div>
+
+        <div th:if="${events != null and !events.isEmpty()}">
+            <div class="feature-grid">
+                <div class="feature-card" th:each="event : ${events}">
+                    <h3 th:text="${event.title}"></h3>
+                    <p><strong style="color: var(--text-primary);">Date:</strong> <span th:text="${#temporals.format(event.eventDate, 'yyyy-MM-dd HH:mm')}"></span></p>
+                    <p><strong style="color: var(--text-primary);">Venue:</strong> <span th:text="${event.venue}"></span></p>
+                    <p><strong style="color: var(--text-primary);">Type:</strong> <span th:text="${event.type}"></span></p>
+                    <p th:text="${event.description}"></p>
+                    <a th:href="@{/events/{id}(id=${event.id})}" class="btn btn-primary btn-sm" style="margin-top: 12px;">View Details</a>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${events == null or events.isEmpty()}" style="text-align: center; padding: 40px;">
+            <p style="color: var(--text-secondary);">No events found.</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

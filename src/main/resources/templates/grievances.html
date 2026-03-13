@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grievances - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/grievances}" class="active">Grievances</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/grievances/analytics}">Analytics</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/faculty}">Manage</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1><i class="ph ph-chat-centered-dots"></i> Grievance Management</h1>
+                <p class="page-description">Submit and track your concerns</p>
+            </div>
+            <!-- ONLY STUDENTS CAN SUBMIT GRIEVANCES -->
+            <a th:href="@{/grievances/new}" class="btn btn-primary" sec:authorize="hasRole('STUDENT')">
+                <i class="ph ph-plus"></i> Submit New Grievance
+            </a>
+        </div>
+
+        <!-- Statistics (Admin Only) -->
+        <div sec:authorize="hasRole('ADMIN')" class="stats-row">
+            <div class="stat-box">
+                <div class="stat-number" th:text="${grievances != null ? grievances.size() : 0}">0</div>
+                <div class="stat-label">Total Grievances</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" style="color: var(--warning);" 
+                     th:text="${grievances != null ? #lists.size(grievances.?[status.name() == 'PENDING']) : 0}">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" style="color: var(--info);" 
+                     th:text="${grievances != null ? #lists.size(grievances.?[status.name() == 'IN_PROGRESS']) : 0}">0</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" style="color: var(--success);" 
+                     th:text="${grievances != null ? #lists.size(grievances.?[status.name() == 'RESOLVED']) : 0}">0</div>
+                <div class="stat-label">Resolved</div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <h3 style="margin-bottom: 15px;"><i class="ph ph-magnifying-glass"></i> Filter by Status</h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterGrievances('ALL')">All</button>
+                <button class="filter-btn" onclick="filterGrievances('PENDING')">Pending</button>
+                <button class="filter-btn" onclick="filterGrievances('IN_PROGRESS')">In Progress</button>
+                <button class="filter-btn" onclick="filterGrievances('RESOLVED')">Resolved</button>
+                <button class="filter-btn" onclick="filterGrievances('REJECTED')">Rejected</button>
+            </div>
+        </div>
+
+        <!-- Grievances List -->
+        <div th:if="${grievances != null and !grievances.isEmpty()}" class="grievances-container">
+            <div th:each="grievance : ${grievances}" class="grievance-card" th:attr="data-status=${grievance.status}">
+                <div class="grievance-header">
+                    <div>
+                        <h2 class="grievance-title" th:text="${grievance.title}">Grievance Title</h2>
+                        <span class="grievance-id">ID: #<span th:text="${grievance.id}">001</span></span>
+                    </div>
+                    <span class="status-badge" th:classappend="'status-' + ${grievance.status}" 
+                          th:text="${grievance.status}">PENDING</span>
+                </div>
+
+                <div class="grievance-meta">
+                    <div class="meta-item">
+                        <span><i class="ph ph-folder"></i></span>
+                        <span class="category-badge" th:classappend="'category-' + ${grievance.category}" 
+                              th:text="${grievance.category}">Category</span>
+                    </div>
+                    <div class="meta-item" sec:authorize="hasRole('ADMIN')">
+                        <span><i class="ph ph-user"></i></span>
+                        <span th:text="${grievance.student.fullName}">Student Name</span>
+                    </div>
+                    <div class="meta-item">
+                        <span><i class="ph ph-calendar"></i></span>
+                        <span th:text="${#temporals.format(grievance.createdAt, 'MMM dd, yyyy')}">Date</span>
+                    </div>
+                    <div class="meta-item" th:if="${grievance.resolvedAt != null}">
+                        <span><i class="ph ph-check-circle"></i></span>
+                        <span>Resolved on <span th:text="${#temporals.format(grievance.resolvedAt, 'MMM dd, yyyy')}">Date</span></span>
+                    </div>
+                </div>
+
+                <div class="grievance-description">
+                    <p th:text="${grievance.description}">Description of the grievance</p>
+                </div>
+
+                <div th:if="${grievance.response != null and !#strings.isEmpty(grievance.response)}" class="grievance-response">
+                    <div class="grievance-response-title"><i class="ph ph-clipboard-text"></i> Response from Administration:</div>
+                    <p th:text="${grievance.response}">Response text</p>
+                </div>
+
+                <!-- Admin Actions -->
+                <div sec:authorize="hasRole('ADMIN')" th:if="${grievance.status.name() != 'RESOLVED'}" style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button onclick="updateStatus(this)" th:attr="data-id=${grievance.id}" 
+                            class="btn btn-primary btn-sm">
+                        Update Status
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div th:if="${grievances == null or grievances.isEmpty()}" style="text-align: center; padding: 80px 20px;">
+            <div style="font-size: 4rem; margin-bottom: 20px; color: var(--text-muted);"><i class="ph ph-chat-centered-dots"></i></div>
+            <h2>No Grievances Found</h2>
+            <p style="color: var(--text-secondary); margin: 20px 0;">You haven't submitted any grievances yet.</p>
+            <a th:href="@{/grievances/new}" class="btn btn-primary">Submit Your First Grievance</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function filterGrievances(status) {
+            const cards = document.querySelectorAll('.grievance-card');
+            const buttons = document.querySelectorAll('.filter-btn');
+            
+            // Update active button
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filter cards
+            cards.forEach(card => {
+                if (status === 'ALL' || card.getAttribute('data-status') === status) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function updateStatus(button) {
+            const id = button.getAttribute('data-id');
+            const newStatus = prompt('Enter new status (PENDING, IN_PROGRESS, RESOLVED, REJECTED):');
+            const response = prompt('Enter response message:');
+            
+            if (newStatus && response) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/grievances/' + id + '/update-status';
+                
+                const statusInput = document.createElement('input');
+                statusInput.type = 'hidden';
+                statusInput.name = 'status';
+                statusInput.value = newStatus;
+                
+                const responseInput = document.createElement('input');
+                responseInput.type = 'hidden';
+                responseInput.name = 'response';
+                responseInput.value = response;
+                
+                form.appendChild(statusInput);
+                form.appendChild(responseInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+</body>
+</html>

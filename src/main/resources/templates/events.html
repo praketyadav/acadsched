@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Events - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/events}" class="active">Events</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/faculty}">Manage</a></li>
+                <li><a th:href="@{/grievances}" sec:authorize="hasAnyRole('ADMIN','STUDENT')">Grievances</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1><i class="ph ph-megaphone"></i> Campus Events</h1>
+                <p class="page-description">Stay updated with upcoming campus activities</p>
+            </div>
+            <!-- ONLY ADMIN CAN CREATE EVENTS -->
+            <a th:href="@{/events/new}" class="btn btn-primary" sec:authorize="hasRole('ADMIN')">
+                <i class="ph ph-plus"></i> Create New Event
+            </a>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="filter-tabs">
+            <button class="filter-tab active" onclick="filterEvents('all')">All Events</button>
+            <button class="filter-tab" onclick="filterEvents('ACADEMIC')">Academic</button>
+            <button class="filter-tab" onclick="filterEvents('CULTURAL')">Cultural</button>
+            <button class="filter-tab" onclick="filterEvents('SPORTS')">Sports</button>
+            <button class="filter-tab" onclick="filterEvents('TECHNICAL')">Technical</button>
+            <button class="filter-tab" onclick="filterEvents('WORKSHOP')">Workshop</button>
+        </div>
+
+        <!-- Events Grid -->
+        <div th:if="${events != null and !events.isEmpty()}" class="events-container">
+            <div th:each="event : ${events}" class="event-card" th:attr="data-type=${event.type}">
+                <div class="event-header">
+                    <span class="event-type" th:text="${event.type}">ACADEMIC</span>
+                    <h2 class="event-title" th:text="${event.title}">Event Title</h2>
+                </div>
+                <div class="event-body">
+                    <div class="event-detail">
+                        <span class="event-detail-icon"><i class="ph ph-calendar"></i></span>
+                        <span th:text="${#temporals.format(event.eventDate, 'EEEE, MMMM dd, yyyy')}">Date</span>
+                    </div>
+                    <div class="event-detail">
+                        <span class="event-detail-icon"><i class="ph ph-clock"></i></span>
+                        <span th:text="${#temporals.format(event.eventDate, 'hh:mm a')}">Time</span>
+                    </div>
+                    <div class="event-detail">
+                        <span class="event-detail-icon"><i class="ph ph-map-pin"></i></span>
+                        <span th:text="${event.venue}">Venue</span>
+                    </div>
+                    <div class="event-detail">
+                        <span class="event-detail-icon"><i class="ph ph-user"></i></span>
+                        <span th:text="${event.organizer.fullName}">Organizer</span>
+                    </div>
+                    
+                    <p style="margin: 15px 0; color: var(--text-secondary); line-height: 1.6;" 
+                       th:text="${#strings.length(event.description) > 120 ? #strings.substring(event.description, 0, 120) + '...' : event.description}">
+                        Description
+                    </p>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                        <span class="event-status" th:classappend="${event.published ? 'status-published' : 'status-draft'}">
+                            <span th:text="${event.published ? '✓ Published' : 'Draft'}">Status</span>
+                        </span>
+                        <a th:href="@{/events/{id}(id=${event.id})}" class="btn btn-primary btn-sm">
+                            View Details <i class="ph ph-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div th:if="${events == null or events.isEmpty()}" style="text-align: center; padding: 80px 20px;">
+            <div style="font-size: 4rem; margin-bottom: 20px; color: var(--text-muted);"><i class="ph ph-megaphone"></i></div>
+            <h2>No Events Found</h2>
+            <p style="color: var(--text-secondary); margin: 20px 0;">There are no events scheduled at the moment.</p>
+            <a th:href="@{/events/new}" class="btn btn-primary" sec:authorize="hasAnyRole('ADMIN','FACULTY')">
+                Create First Event
+            </a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function filterEvents(type) {
+            const cards = document.querySelectorAll('.event-card');
+            const tabs = document.querySelectorAll('.filter-tab');
+            
+            // Update active tab
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filter cards
+            cards.forEach(card => {
+                if (type === 'all' || card.getAttribute('data-type') === type) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

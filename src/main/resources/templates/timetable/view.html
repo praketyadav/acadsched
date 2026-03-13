@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Timetable - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/timetable}" class="active">Timetable</a></li>
+                <li><a th:href="@{/events}">Events</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-calendar-check"></i> Timetable Management</h1>
+        
+        <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <div style="margin: 20px 0;">
+            <a th:href="@{/timetable/generate}" class="btn btn-primary"><i class="ph ph-lightning"></i> Generate New Timetable</a>
+        </div>
+
+        <div th:if="${schedule != null and !schedule.isEmpty()}">
+            <h2>Current Timetable</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Time Slot</th>
+                        <th>Subject</th>
+                        <th>Faculty</th>
+                        <th>Classroom</th>
+                        <th>Section</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${schedule}">
+                        <td th:text="${entry.dayOfWeek}"></td>
+                        <td th:text="${entry.timeSlot}"></td>
+                        <td th:text="${entry.subject.name}"></td>
+                        <td th:text="${entry.faculty.name}"></td>
+                        <td th:text="${entry.classroom.roomNumber}"></td>
+                        <td th:text="${entry.classGroup.section}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${schedule == null or schedule.isEmpty()}" style="text-align: center; padding: 40px;">
+            <p style="color: var(--text-secondary);">No timetable available. Please generate one.</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

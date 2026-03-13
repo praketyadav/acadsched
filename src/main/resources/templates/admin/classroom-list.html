@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Classroom Management - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/admin/faculty}">Faculty</a></li>
+                <li><a th:href="@{/admin/subjects}">Subjects</a></li>
+                <li><a th:href="@{/admin/classrooms}" class="active">Classrooms</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-buildings"></i> Classroom Management</h1>
+
+        <div th:if="${param.success}" class="alert alert-success">Classroom created successfully!</div>
+        <div th:if="${param.updated}" class="alert alert-success">Classroom updated successfully!</div>
+        <div th:if="${param.deleted}" class="alert alert-success">Classroom deleted successfully!</div>
+
+        <div style="margin: 20px 0;">
+            <a th:href="@{/admin/classrooms/new}" class="btn btn-primary"><i class="ph ph-plus"></i> Add New Classroom</a>
+        </div>
+
+        <div th:if="${classrooms != null and !classrooms.isEmpty()}">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Room Number</th>
+                        <th>Building</th>
+                        <th>Capacity</th>
+                        <th>Type</th>
+                        <th>Equipment</th>
+                        <th>Available</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="classroom : ${classrooms}">
+                        <td th:text="${classroom.roomNumber}"></td>
+                        <td th:text="${classroom.building}"></td>
+                        <td th:text="${classroom.capacity}"></td>
+                        <td th:text="${classroom.type}"></td>
+                        <td th:text="${classroom.equipment}"></td>
+                        <td>
+                            <span th:if="${classroom.available}" style="color: var(--success);">✓ Yes</span>
+                            <span th:unless="${classroom.available}" style="color: var(--danger);">✗ No</span>
+                        </td>
+                        <td>
+                            <a th:href="@{/admin/classrooms/{id}/edit(id=${classroom.id})}" class="btn btn-primary btn-sm">Edit</a>
+                            <form th:action="@{/admin/classrooms/{id}/delete(id=${classroom.id})}" method="post" style="display: inline;" onsubmit="return confirm('Delete this classroom?');">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${classrooms == null or classrooms.isEmpty()}" style="text-align: center; padding: 40px;">
+            <p style="color: var(--text-secondary);">No classrooms found. <a th:href="@{/admin/classrooms/new}">Add one now</a>.</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

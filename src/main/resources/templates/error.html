@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card" style="max-width: 600px; text-align: center;">
+            <div style="font-size: 4rem; color: var(--danger); margin-bottom: 8px;">
+                <i class="ph ph-warning-circle"></i>
+            </div>
+            <h1 th:text="${statusCode}" style="color: var(--danger); font-size: 3rem;">Error</h1>
+            <p th:text="${message}" style="color: var(--text-secondary); margin: 16px 0;">An error occurred</p>
+            
+            <div th:if="${exception}" style="background: var(--bg-elevated); padding: 20px; border-radius: var(--radius-sm); text-align: left; margin: 20px 0; font-size: 0.82rem; overflow-x: auto; border: 1px solid var(--border);">
+                <h3 style="color: var(--accent); margin-bottom: 12px;">Exception Details:</h3>
+                <pre th:text="${exception}" style="color: var(--text-secondary); white-space: pre-wrap; word-break: break-all;"></pre>
+            </div>
+            
+            <p style="color: var(--text-muted); font-size: 0.9rem;">An unexpected error occurred. Please try again or contact support.</p>
+            
+            <a th:href="@{/}" class="btn btn-primary" style="margin-top: 24px;">Go to Home</a>
+        </div>
+    </div>
+</body>
+</html>

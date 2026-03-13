@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2>Register for AcadSched</h2>
+
+            <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+            <form th:action="@{/register}" th:object="${user}" method="post" class="auth-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" th:field="*{username}" required placeholder="Choose a username">
+                    <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" th:field="*{fullName}" required placeholder="Enter your full name">
+                    <span th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" th:field="*{email}" required placeholder="Enter your email">
+                    <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" th:field="*{password}" required placeholder="Create a password">
+                    <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" th:field="*{role}" required>
+                        <option value="">Select Role</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="FACULTY">Faculty</option>
+                        <option value="STUDENT">Student</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Register</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account? <a th:href="@{/login}">Login here</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

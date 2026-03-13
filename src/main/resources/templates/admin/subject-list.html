@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Subject Management - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/admin/faculty}">Faculty</a></li>
+                <li><a th:href="@{/admin/subjects}" class="active">Subjects</a></li>
+                <li><a th:href="@{/admin/classrooms}">Classrooms</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1><i class="ph ph-books"></i> Subject Management</h1>
+
+        <div th:if="${param.success}" class="alert alert-success">Subject created successfully!</div>
+        <div th:if="${param.updated}" class="alert alert-success">Subject updated successfully!</div>
+        <div th:if="${param.deleted}" class="alert alert-success">Subject deleted successfully!</div>
+
+        <div style="margin: 20px 0;">
+            <a th:href="@{/admin/subjects/new}" class="btn btn-primary"><i class="ph ph-plus"></i> Add New Subject</a>
+        </div>
+
+        <div th:if="${subjects != null and !subjects.isEmpty()}">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Credits</th>
+                        <th>Department</th>
+                        <th>Semester</th>
+                        <th>Faculty</th>
+                        <th>Priority</th>
+                        <th>Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="subject : ${subjects}">
+                        <td th:text="${subject.subjectCode}"></td>
+                        <td th:text="${subject.name}"></td>
+                        <td th:text="${subject.credits}"></td>
+                        <td th:text="${subject.department}"></td>
+                        <td th:text="${subject.semester}"></td>
+                        <td th:text="${subject.faculty != null ? subject.faculty.name : 'Not Assigned'}"></td>
+                        <td th:text="${subject.priority}"></td>
+                        <td th:text="${subject.type}"></td>
+                        <td>
+                            <a th:href="@{/admin/subjects/{id}/edit(id=${subject.id})}" class="btn btn-primary btn-sm">Edit</a>
+                            <form th:action="@{/admin/subjects/{id}/delete(id=${subject.id})}" method="post" style="display: inline;" 
+                                  onsubmit="return confirm('Delete this subject?');">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${subjects == null or subjects.isEmpty()}" style="text-align: center; padding: 40px;">
+            <p style="color: var(--text-secondary);">No subjects found. <a th:href="@{/admin/subjects/new}">Add one now</a>.</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

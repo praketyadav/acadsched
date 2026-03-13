@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AcadSched</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}" class="active">Dashboard</a></li>
+                
+                <!-- ADMIN Navigation -->
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/faculty}">Manage Data</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/timetable}">Timetable</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/events}">Events</a></li>
+                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/grievances}">Grievances</a></li>
+                
+                <!-- FACULTY Navigation -->
+                <li sec:authorize="hasRole('FACULTY')"><a th:href="@{/timetable}">My Timetable</a></li>
+                <li sec:authorize="hasRole('FACULTY')"><a th:href="@{/events}">Events</a></li>
+                
+                <!-- STUDENT Navigation -->
+                <li sec:authorize="hasRole('STUDENT')"><a th:href="@{/timetable}">My Timetable</a></li>
+                <li sec:authorize="hasRole('STUDENT')"><a th:href="@{/grievances}">Grievances</a></li>
+                <li sec:authorize="hasRole('STUDENT')"><a th:href="@{/events}">Events</a></li>
+                
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Dashboard</h1>
+        <p>Welcome, <span sec:authentication="name" style="font-weight: 600; color: var(--accent);">User</span>!</p>
+
+        <!-- ==================== ADMIN DASHBOARD ==================== -->
+        <div sec:authorize="hasRole('ADMIN')" class="dashboard-grid">
+            <h2 style="grid-column: 1 / -1; color: var(--accent);">Administrator Panel</h2>
+            
+            <!-- 1. Manage Academic Data -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-books"></i> Manage Academic Data</h3>
+                <p>Configure faculty, subjects, classrooms, and time slots</p>
+                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                    <a th:href="@{/admin/faculty}" class="btn btn-primary btn-sm">Faculty</a>
+                    <a th:href="@{/admin/subjects}" class="btn btn-primary btn-sm">Subjects</a>
+                    <a th:href="@{/admin/classrooms}" class="btn btn-primary btn-sm">Classrooms</a>
+                </div>
+            </div>
+
+            <!-- 2. Generate Timetable -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-calendar-check"></i> Generate Timetable</h3>
+                <p>Create conflict-free schedules with constraint validation</p>
+                <a th:href="@{/timetable/generate}" class="btn btn-primary">Generate Timetable</a>
+            </div>
+
+            <!-- 3. Dynamic Rescheduling -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-arrows-clockwise"></i> Dynamic Rescheduling</h3>
+                <p>Handle schedule changes and conflicts</p>
+                <a th:href="@{/timetable}" class="btn btn-primary">View &amp; Reschedule</a>
+            </div>
+
+            <!-- 4. Manage Events -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-megaphone"></i> Manage Events</h3>
+                <p>Create, update, and publish campus events</p>
+                <a th:href="@{/events/new}" class="btn btn-primary">Create Event</a>
+            </div>
+
+            <!-- 5. Monitor Grievances -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-chat-centered-dots"></i> Monitor Grievances</h3>
+                <p>View and respond to student grievances</p>
+                <a th:href="@{/grievances}" class="btn btn-primary">View Grievances</a>
+            </div>
+
+            <!-- 6. Analytics -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-chart-bar"></i> Analytics</h3>
+                <p>View grievance trends and statistics</p>
+                <a th:href="@{/grievances/analytics}" class="btn btn-primary">View Analytics</a>
+            </div>
+        </div>
+
+        <!-- ==================== FACULTY DASHBOARD ==================== -->
+        <div sec:authorize="hasRole('FACULTY')" class="dashboard-grid">
+            <h2 style="grid-column: 1 / -1; color: var(--accent);">Faculty Panel</h2>
+            
+            <!-- 1. View Assigned Timetable -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-calendar-check"></i> View Assigned Timetable</h3>
+                <p>Check your teaching schedule and classroom details</p>
+                <a th:href="@{/timetable}" class="btn btn-primary">View My Timetable</a>
+            </div>
+
+            <!-- 2. View Campus Events -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-megaphone"></i> View Campus Events</h3>
+                <p>Browse upcoming institutional events</p>
+                <a th:href="@{/events}" class="btn btn-primary">View Events</a>
+            </div>
+        </div>
+
+        <!-- ==================== STUDENT DASHBOARD ==================== -->
+        <div sec:authorize="hasRole('STUDENT')" class="dashboard-grid">
+            <h2 style="grid-column: 1 / -1; color: var(--accent);">Student Panel</h2>
+            
+            <!-- 1. View Personal Timetable -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-calendar-check"></i> View Personal Timetable</h3>
+                <p>Check your class schedule</p>
+                <a th:href="@{/timetable}" class="btn btn-primary">View My Timetable</a>
+            </div>
+
+            <!-- 2. Submit Grievance -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-chat-centered-dots"></i> Submit Grievance</h3>
+                <p>Report academic or infrastructure issues</p>
+                <a th:href="@{/grievances/new}" class="btn btn-primary">Submit Grievance</a>
+            </div>
+
+            <!-- 3. View Campus Events -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-megaphone"></i> View Campus Events</h3>
+                <p>Browse upcoming campus activities</p>
+                <a th:href="@{/events}" class="btn btn-primary">View Events</a>
+            </div>
+
+            <!-- 4. My Grievances -->
+            <div class="dashboard-card">
+                <h3><i class="ph ph-clipboard-text"></i> My Grievances</h3>
+                <p>Track status of your submitted grievances</p>
+                <a th:href="@{/grievances}" class="btn btn-primary">View My Grievances</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>

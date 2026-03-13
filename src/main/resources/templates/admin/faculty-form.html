@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${faculty.id == null ? 'Add Faculty' : 'Edit Faculty'}">Faculty Form</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li><a th:href="@{/admin/faculty}" class="active">Faculty</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 th:text="${faculty.id == null ? 'Add New Faculty' : 'Edit Faculty'}"></h1>
+
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <div style="max-width: 600px; margin: 24px auto; background: var(--bg-card); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <form th:action="${faculty.id == null ? '/admin/faculty/new' : '/admin/faculty/' + faculty.id + '/edit'}" 
+                  th:object="${faculty}" method="post">
+                
+                <div class="form-group">
+                    <label for="facultyId">Faculty ID *</label>
+                    <input type="text" id="facultyId" th:field="*{facultyId}" required 
+                           th:readonly="${faculty.id != null}" placeholder="Enter faculty ID">
+                    <span th:if="${#fields.hasErrors('facultyId')}" th:errors="*{facultyId}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" th:field="*{name}" required placeholder="Enter full name">
+                    <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="department">Department *</label>
+                    <input type="text" id="department" th:field="*{department}" required placeholder="Enter department">
+                    <span th:if="${#fields.hasErrors('department')}" th:errors="*{department}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" th:field="*{email}" required placeholder="Enter email">
+                    <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number</label>
+                    <input type="tel" id="phoneNumber" th:field="*{phoneNumber}" placeholder="Enter phone number">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" th:field="*{available}"> Available for Teaching
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" 
+                        th:text="${faculty.id == null ? 'Create Faculty' : 'Update Faculty'}"></button>
+            </form>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <a th:href="@{/admin/faculty}"><i class="ph ph-arrow-left"></i> Back to Faculty List</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 AcadSched. All rights reserved.</p>
+    </footer>
+</body>
+</html>
