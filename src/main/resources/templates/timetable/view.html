@@ -1,10 +1,99 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <title>Timetable - AcadSched</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <style>
+    /* ═══════ Admin Edit Modal ═══════ */
+    .modal-overlay {
+        display: none; position: fixed; inset: 0; z-index: 1000;
+        background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+        align-items: center; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: #1a1a1e; border: 1px solid #2a2a30; border-radius: 16px;
+        width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+        animation: modalIn .25s ease-out;
+    }
+    @keyframes modalIn { from { opacity:0; transform:translateY(20px) scale(.97); } }
+    .modal-header {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 20px 24px; border-bottom: 1px solid #2a2a30;
+    }
+    .modal-header h3 { margin:0; font-size: 1.15rem; color: #f3f4f6; }
+    .modal-close {
+        background: none; border: none; color: #888; font-size: 1.4rem;
+        cursor: pointer; padding: 4px 8px; border-radius: 6px;
+        transition: background .2s;
+    }
+    .modal-close:hover { background: #2a2a30; color: #fff; }
+    .modal-body { padding: 20px 24px; }
+    .modal-body .form-group { margin-bottom: 16px; }
+    .modal-body label {
+        display: block; margin-bottom: 5px; font-size: 0.85rem;
+        color: #aaa; font-weight: 500;
+    }
+    .modal-body select, .modal-body input[type="text"] {
+        width: 100%; padding: 10px 12px; background: #141414; color: #f3f4f6;
+        border: 1px solid #333; border-radius: 8px; font-size: 0.95rem;
+    }
+    .modal-body select:focus, .modal-body input[type="text"]:focus {
+        border-color: #00BFA6; outline: none;
+    }
+    .modal-subject-badge {
+        display: inline-block; padding: 6px 14px; background: rgba(0,191,166,0.12);
+        color: #00BFA6; border-radius: 8px; font-weight: 600; font-size: 0.95rem;
+        margin-bottom: 16px;
+    }
+    .modal-footer {
+        padding: 16px 24px; border-top: 1px solid #2a2a30;
+        display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .btn-save {
+        padding: 10px 24px; background: #00BFA6; color: #fff; border: none;
+        border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem;
+        transition: background .2s, transform .1s;
+    }
+    .btn-save:hover { background: #00a892; transform: translateY(-1px); }
+    .btn-save:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-force {
+        padding: 10px 24px; background: transparent; color: #f59e0b;
+        border: 1px solid #f59e0b; border-radius: 8px; font-weight: 600;
+        cursor: pointer; font-size: 0.9rem; display: none;
+        transition: background .2s;
+    }
+    .btn-force:hover { background: rgba(245,158,11,0.12); }
+    .btn-cancel {
+        padding: 10px 20px; background: transparent; color: #888; border: 1px solid #333;
+        border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+        transition: background .2s;
+    }
+    .btn-cancel:hover { background: #2a2a30; color: #ccc; }
+
+    /* Conflict warning area */
+    .conflict-area { display: none; margin-top: 16px; }
+    .conflict-area.active { display: block; }
+    .conflict-item {
+        display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px;
+        background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
+        border-radius: 8px; margin-bottom: 8px; font-size: 0.88rem; color: #f87171;
+    }
+    .conflict-item i { flex-shrink: 0; margin-top: 2px; }
+
+    /* Clickable rows (admin only) */
+    tr.admin-editable { cursor: pointer; transition: background .15s; }
+    tr.admin-editable:hover { background: rgba(0,191,166,0.06) !important; }
+    tr.admin-editable td:last-child::after {
+        content: '\270E'; margin-left: 8px; opacity: 0; color: #00BFA6;
+        transition: opacity .15s;
+    }
+    tr.admin-editable:hover td:last-child::after { opacity: 1; }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -29,12 +118,44 @@
         <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
         <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
 
-        <div style="margin: 20px 0;">
-            <a th:href="@{/timetable/generate}" class="btn btn-primary"><i class="ph ph-lightning"></i> Generate New Timetable</a>
+        <!-- Leave Actions Summary -->
+        <div th:if="${leaveActions}" style="background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px;">
+            <h3 style="margin-bottom: 12px;"><i class="ph ph-clipboard-text"></i> Faculty Leave — Rescheduling Summary</h3>
+            <div th:each="action : ${leaveActions}" style="padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-secondary);">
+                <span th:text="${action}"></span>
+            </div>
         </div>
 
-        <div th:if="${schedule != null and !schedule.isEmpty()}">
-            <h2>Current Timetable</h2>
+        <div style="margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+            <a th:href="@{/timetable/generate}" class="btn btn-primary">
+                <i class="ph ph-lightning"></i> Generate New Timetable
+            </a>
+        </div>
+
+        <!-- ═══════ View Filter ═══════ -->
+        <div class="filter-section">
+            <h3 style="margin-bottom: 15px;"><i class="ph ph-magnifying-glass"></i> View Timetable</h3>
+            <form th:action="@{/timetable/view}" method="get" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="semester">Semester</label>
+                    <input type="text" id="semester" name="semester" th:value="${semester}" placeholder="e.g., Fall 2024" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="section">Section</label>
+                    <input type="text" id="section" name="section" th:value="${section}" placeholder="e.g., A" required>
+                </div>
+                <button type="submit" class="btn btn-primary">View</button>
+            </form>
+        </div>
+
+        <!-- ═══════ Timetable Grid ═══════ -->
+        <div th:if="${schedule != null and !schedule.isEmpty()}" id="timetableGrid">
+            <h2 th:if="${semester != null and section != null}" style="margin: 24px 0 16px;">
+                Timetable: <span th:text="${semester}"></span> — Section <span th:text="${section}"></span>
+                <span sec:authorize="hasRole('ADMIN')" style="font-size: 0.75rem; color: var(--text-muted); font-weight:400; margin-left: 12px;">
+                    <i class="ph ph-pencil-simple"></i> Click any row to edit
+                </span>
+            </h2>
             <table>
                 <thead>
                     <tr>
@@ -46,8 +167,30 @@
                         <th>Section</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr th:each="entry : ${schedule}">
+                <tbody id="timetableBody">
+                    <tr th:each="entry : ${schedule}"
+                        sec:authorize="hasRole('ADMIN')"
+                        class="admin-editable"
+                        th:data-id="${entry.id}"
+                        th:data-day="${entry.dayOfWeek}"
+                        th:data-time="${entry.timeSlot}"
+                        th:data-subject="${entry.subject.name}"
+                        th:data-faculty-id="${entry.faculty.id}"
+                        th:data-faculty-name="${entry.faculty.name}"
+                        th:data-classroom-id="${entry.classroom.id}"
+                        th:data-classroom-name="${entry.classroom.roomNumber}"
+                        th:data-section="${entry.classGroup.section}"
+                        onclick="openEditModal(this)">
+                        <td th:text="${entry.dayOfWeek}"></td>
+                        <td th:text="${entry.timeSlot}"></td>
+                        <td th:text="${entry.subject.name}"></td>
+                        <td th:text="${entry.faculty.name}"></td>
+                        <td th:text="${entry.classroom.roomNumber}"></td>
+                        <td th:text="${entry.classGroup.section}"></td>
+                    </tr>
+                    <!--/* Non-admin rows (no interactive features) */-->
+                    <tr th:each="entry : ${schedule}"
+                        sec:authorize="!hasRole('ADMIN')">
                         <td th:text="${entry.dayOfWeek}"></td>
                         <td th:text="${entry.timeSlot}"></td>
                         <td th:text="${entry.subject.name}"></td>
@@ -60,12 +203,306 @@
         </div>
 
         <div th:if="${schedule == null or schedule.isEmpty()}" style="text-align: center; padding: 40px;">
-            <p style="color: var(--text-secondary);">No timetable available. Please generate one.</p>
+            <div style="font-size: 3rem; color: var(--text-muted); margin-bottom: 12px;"><i class="ph ph-calendar-blank"></i></div>
+            <p style="color: var(--text-secondary);">No timetable available. Generate one or search by semester/section above.</p>
+        </div>
+
+        <!-- ═══════ Faculty Leave Rescheduling (Admin only) ═══════ -->
+        <div sec:authorize="hasRole('ADMIN')" style="margin-top: 32px; background: var(--bg-card); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <h3 style="margin-bottom: 16px;">
+                <i class="ph ph-user-minus" style="color: var(--accent);"></i> Dynamic Faculty Leave Rescheduling
+            </h3>
+            <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9rem;">
+                Mark a faculty as on leave. The system will move affected classes to a free slot on another day, respecting daily gap constraints.
+            </p>
+            <form id="leaveForm" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                <input type="hidden" id="csrfToken" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <input type="hidden" id="leaveGapHours" name="studentGapHours" value="1">
+                <div class="form-group" style="margin-bottom: 0; min-width: 180px;">
+                    <label for="leaveFacultyId"><i class="ph ph-chalkboard-teacher"></i> Faculty</label>
+                    <select id="leaveFacultyId" name="facultyId" required>
+                        <option value="">Select Faculty</option>
+                        <option th:each="f : ${faculties}" th:value="${f.id}" th:text="${f.name}"></option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="leaveDay"><i class="ph ph-calendar"></i> Leave Day</label>
+                    <select id="leaveDay" name="leaveDay" required>
+                        <option value="">Select Day</option>
+                        <option value="MONDAY">Monday</option>
+                        <option value="TUESDAY">Tuesday</option>
+                        <option value="WEDNESDAY">Wednesday</option>
+                        <option value="THURSDAY">Thursday</option>
+                        <option value="FRIDAY">Friday</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="leaveTimeSlot"><i class="ph ph-clock"></i> Time Slot (optional)</label>
+                    <select id="leaveTimeSlot" name="leaveTimeSlot">
+                        <option value="">Whole Day</option>
+                        <option value="09:00-10:00">09:00 - 10:00</option>
+                        <option value="10:00-11:00">10:00 - 11:00</option>
+                        <option value="11:00-12:00">11:00 - 12:00</option>
+                        <option value="12:00-13:00">12:00 - 13:00</option>
+                        <option value="14:00-15:00">14:00 - 15:00</option>
+                        <option value="15:00-16:00">15:00 - 16:00</option>
+                        <option value="16:00-17:00">16:00 - 17:00</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" id="leaveBtn">
+                    <i class="ph ph-arrows-clockwise"></i> Process Leave
+                </button>
+            </form>
+            <div id="leaveResult" style="display: none; margin-top: 20px; padding: 16px; border-radius: var(--radius); border: 1px solid var(--border);"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  ADMIN EDIT MODAL                                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="ph ph-pencil-simple" style="color:#00BFA6;"></i> Edit Class Slot</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-subject-badge" id="modalSubject"></div>
+                <input type="hidden" id="editEntryId">
+
+                <div class="form-group">
+                    <label><i class="ph ph-chalkboard-teacher"></i> Faculty</label>
+                    <select id="editFaculty">
+                        <option th:each="f : ${faculties}" th:value="${f.id}" th:text="${f.name}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><i class="ph ph-buildings"></i> Classroom</label>
+                    <select id="editClassroom">
+                        <option th:each="c : ${classrooms}" th:value="${c.id}" th:text="${c.roomNumber}"></option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex:1;">
+                        <label><i class="ph ph-calendar"></i> Day</label>
+                        <select id="editDay">
+                            <option value="MONDAY">Monday</option>
+                            <option value="TUESDAY">Tuesday</option>
+                            <option value="WEDNESDAY">Wednesday</option>
+                            <option value="THURSDAY">Thursday</option>
+                            <option value="FRIDAY">Friday</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label><i class="ph ph-clock"></i> Time Slot</label>
+                        <select id="editTime">
+                            <option value="09:00-10:00">09:00 - 10:00</option>
+                            <option value="10:00-11:00">10:00 - 11:00</option>
+                            <option value="11:00-12:00">11:00 - 12:00</option>
+                            <option value="12:00-13:00">12:00 - 13:00</option>
+                            <option value="14:00-15:00">14:00 - 15:00</option>
+                            <option value="15:00-16:00">15:00 - 16:00</option>
+                            <option value="16:00-17:00">16:00 - 17:00</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Conflict Warnings -->
+                <div class="conflict-area" id="conflictArea">
+                    <h4 style="color:#f59e0b; margin-bottom:10px; font-size:0.9rem;">
+                        <i class="ph ph-warning-circle"></i> Conflicts Detected
+                    </h4>
+                    <div id="conflictList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+                <button class="btn-force" id="btnForce" onclick="saveOverride(true)">
+                    <i class="ph ph-shield-warning"></i> Force Save
+                </button>
+                <button class="btn-save" id="btnSave" onclick="saveOverride(false)">
+                    <i class="ph ph-floppy-disk"></i> Save Changes
+                </button>
+            </div>
         </div>
     </div>
 
     <footer class="footer">
         <p>&copy; 2024 AcadSched. All rights reserved.</p>
     </footer>
+
+    <script>
+    /* ═══════ CSRF token (shared by all AJAX) ═══════ */
+    var csrfInput = document.getElementById('csrfToken');
+    var csrfName  = csrfInput ? csrfInput.name : '_csrf';
+    var csrfValue = csrfInput ? csrfInput.value : '';
+
+    /* ═══════ Edit Modal Logic ═══════ */
+    function openEditModal(row) {
+        document.getElementById('editEntryId').value  = row.dataset.id;
+        document.getElementById('modalSubject').textContent = row.dataset.subject;
+        document.getElementById('editFaculty').value  = row.dataset.facultyId;
+        document.getElementById('editClassroom').value = row.dataset.classroomId;
+        document.getElementById('editDay').value      = row.dataset.day;
+        document.getElementById('editTime').value     = row.dataset.time;
+
+        // Reset conflict state
+        document.getElementById('conflictArea').classList.remove('active');
+        document.getElementById('conflictList').innerHTML = '';
+        document.getElementById('btnForce').style.display = 'none';
+        document.getElementById('btnSave').disabled = false;
+        document.getElementById('btnSave').innerHTML = '<i class="ph ph-floppy-disk"></i> Save Changes';
+
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    // Close on overlay click
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeEditModal();
+    });
+
+    function saveOverride(force) {
+        var btn = force ? document.getElementById('btnForce') : document.getElementById('btnSave');
+        var origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Saving...';
+
+        var body = new URLSearchParams();
+        body.append('entryId', document.getElementById('editEntryId').value);
+        body.append('newFacultyId', document.getElementById('editFaculty').value);
+        body.append('newClassroomId', document.getElementById('editClassroom').value);
+        body.append('newDay', document.getElementById('editDay').value);
+        body.append('newTimeSlot', document.getElementById('editTime').value);
+        body.append('force', force);
+        body.append('studentGapHours', '1');
+        body.append(csrfName, csrfValue);
+
+        fetch('/timetable/admin-override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+
+            if (data.saved) {
+                // Success — close modal and refresh page to show updated timetable
+                closeEditModal();
+                var sem = document.getElementById('semester').value;
+                var sec = document.getElementById('section').value;
+                if (sem && sec) {
+                    window.location.href = '/timetable/view?semester='
+                        + encodeURIComponent(sem) + '&section=' + encodeURIComponent(sec);
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                // Show conflicts
+                var area = document.getElementById('conflictArea');
+                var list = document.getElementById('conflictList');
+                area.classList.add('active');
+                list.innerHTML = '';
+                (data.conflicts || []).forEach(function(c) {
+                    list.innerHTML += '<div class="conflict-item">'
+                        + '<i class="ph ph-warning-circle"></i><span>' + c + '</span></div>';
+                });
+                // Show force button
+                document.getElementById('btnForce').style.display = 'inline-flex';
+            }
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            alert('Network error: ' + err.message);
+        });
+    }
+
+    /* ═══════ Faculty Leave AJAX (unchanged logic) ═══════ */
+    document.addEventListener('DOMContentLoaded', function() {
+        var form = document.getElementById('leaveForm');
+        if (!form) return;
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('leaveBtn');
+            var resultDiv = document.getElementById('leaveResult');
+
+            var facultyId = document.getElementById('leaveFacultyId').value;
+            var leaveDay  = document.getElementById('leaveDay').value;
+            if (!facultyId || !leaveDay) {
+                resultDiv.style.display = 'block';
+                resultDiv.style.borderColor = '#ef4444';
+                resultDiv.innerHTML = '<p style="color:#ef4444;font-weight:600;">Please select both a faculty member and a leave day.</p>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Processing...';
+
+            var body = new URLSearchParams();
+            body.append('facultyId', facultyId);
+            body.append('leaveDay', leaveDay);
+            body.append('leaveTimeSlot', document.getElementById('leaveTimeSlot').value);
+            body.append('studentGapHours', document.getElementById('leaveGapHours').value || '1');
+            body.append(csrfName, csrfValue);
+
+            fetch('/timetable/faculty-leave', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString()
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                resultDiv.style.display = 'block';
+                if (data.success) {
+                    resultDiv.style.borderColor = 'var(--accent, #00BFA6)';
+                    var html = '<h4 style="margin-bottom:10px;color:var(--accent,#00BFA6);">'
+                             + '<i class="ph ph-check-circle"></i> ' + data.message + '</h4>';
+                    if (data.actions && data.actions.length) {
+                        html += '<div style="font-size:0.9rem;color:var(--text-secondary,#aaa);">';
+                        data.actions.forEach(function(a) {
+                            var color = a.charAt(0) === '\u2713' ? 'var(--accent,#00BFA6)' : '#ef4444';
+                            html += '<div style="padding:6px 0;border-bottom:1px solid var(--border,#333);color:' + color + ';">' + a + '</div>';
+                        });
+                        html += '</div>';
+                    }
+                    resultDiv.innerHTML = html;
+                    if (data.semester && data.section) {
+                        setTimeout(function() {
+                            window.location.href = '/timetable/view?semester='
+                                + encodeURIComponent(data.semester)
+                                + '&section=' + encodeURIComponent(data.section);
+                        }, 2000);
+                    }
+                } else {
+                    resultDiv.style.borderColor = '#ef4444';
+                    resultDiv.innerHTML = '<p style="color:#ef4444;font-weight:600;">'
+                        + '<i class="ph ph-warning-circle"></i> ' + data.message + '</p>';
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Process Leave';
+            })
+            .catch(function(err) {
+                resultDiv.style.display = 'block';
+                resultDiv.style.borderColor = '#ef4444';
+                resultDiv.innerHTML = '<p style="color:#ef4444;font-weight:600;">'
+                    + '<i class="ph ph-warning-circle"></i> Network error: ' + err.message + '</p>';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Process Leave';
+            });
+        });
+    });
+    </script>
 </body>
 </html>

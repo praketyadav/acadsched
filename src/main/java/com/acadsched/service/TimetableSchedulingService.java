@@ -23,6 +23,11 @@ public class TimetableSchedulingService {
         return schedulingService.generateTimetable(semester, section);
     }
 
+    @Transactional
+    public List<Timetable> generateTimetable(String semester, String section, int studentGapHours) {
+        return schedulingService.generateTimetable(semester, section, studentGapHours);
+    }
+
     public List<Timetable> getTimetableBySemesterAndSection(String semester, String section) {
         return schedulingService.getTimetableBySemesterAndSection(semester, section);
     }
@@ -34,5 +39,10 @@ public class TimetableSchedulingService {
     @Transactional
     public void rescheduleSession(Long timetableId, String newDay, String newTimeSlot) {
         schedulingService.rescheduleSession(timetableId, newDay, newTimeSlot);
+    }
+
+    @Transactional
+    public List<String> handleFacultyLeave(Long facultyId, String day, String timeSlot) {
+        return schedulingService.handleFacultyLeave(facultyId, day, timeSlot);
     }
 }

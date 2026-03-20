@@ -30,16 +30,30 @@
         <div style="max-width: 500px; margin: 24px auto; background: var(--bg-card); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);">
             <form th:action="@{/timetable/generate}" method="post">
                 <div class="form-group">
-                    <label for="semester">Semester</label>
+                    <label for="semester">Semester *</label>
                     <input type="text" id="semester" name="semester" placeholder="e.g., Fall 2024" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="section">Section</label>
+                    <label for="section">Section *</label>
                     <input type="text" id="section" name="section" placeholder="e.g., A" required>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block"><i class="ph ph-lightning"></i> Generate Timetable</button>
+                <div class="form-group">
+                    <label for="studentGapHours">
+                        <i class="ph ph-clock-countdown"></i> Student Gap Hours *
+                    </label>
+                    <input type="number" id="studentGapHours" name="studentGapHours" 
+                           min="0" max="3" value="1" required>
+                    <small style="color: var(--text-muted); display: block; margin-top: 6px;">
+                        Minimum free hours per student per day (0–3). 
+                        E.g., "2" means each day will have at most 5 classes, leaving 2 free slots.
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">
+                    <i class="ph ph-lightning"></i> Generate Timetable
+                </button>
             </form>
 
             <div style="margin-top: 20px; text-align: center;">

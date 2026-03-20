@@ -8,147 +8,359 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 </head>
-<body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <a th:href="@{/}" class="nav-brand">AcadSched</a>
-            <ul class="nav-menu">
-                <li><a th:href="@{/dashboard}" class="active">Dashboard</a></li>
-                
-                <!-- ADMIN Navigation -->
-                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/faculty}">Manage Data</a></li>
-                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/timetable}">Timetable</a></li>
-                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/events}">Events</a></li>
-                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/grievances}">Grievances</a></li>
-                
-                <!-- FACULTY Navigation -->
-                <li sec:authorize="hasRole('FACULTY')"><a th:href="@{/timetable}">My Timetable</a></li>
-                <li sec:authorize="hasRole('FACULTY')"><a th:href="@{/events}">Events</a></li>
-                
-                <!-- STUDENT Navigation -->
-                <li sec:authorize="hasRole('STUDENT')"><a th:href="@{/timetable}">My Timetable</a></li>
-                <li sec:authorize="hasRole('STUDENT')"><a th:href="@{/grievances}">Grievances</a></li>
-                <li sec:authorize="hasRole('STUDENT')"><a th:href="@{/events}">Events</a></li>
-                
-                <li>
-                    <form th:action="@{/logout}" method="post" style="display: inline;">
-                        <button type="submit" class="btn-logout">Logout</button>
-                    </form>
-                </li>
-            </ul>
-        </div>
-    </nav>
+<body class="has-sidebar">
 
-    <div class="container">
-        <h1>Dashboard</h1>
-        <p>Welcome, <span sec:authentication="name" style="font-weight: 600; color: var(--accent);">User</span>!</p>
+    <!-- ═══════ SIDEBAR ═══════ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <a th:href="@{/}">
+                <i class="ph ph-graduation-cap"></i>
+                <span>AcadSched</span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <span class="sidebar-label">MAIN</span>
+            <a th:href="@{/dashboard}" class="sidebar-link active">
+                <i class="ph ph-squares-four"></i> Dashboard
+            </a>
+
+            <!-- ADMIN nav -->
+            <span sec:authorize="hasRole('ADMIN')" class="sidebar-label">ADMINISTRATION</span>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/faculty}" class="sidebar-link">
+                <i class="ph ph-database"></i> Manage Data
+            </a>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/timetable}" class="sidebar-link">
+                <i class="ph ph-calendar-check"></i> Timetable
+            </a>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/events}" class="sidebar-link">
+                <i class="ph ph-megaphone"></i> Events
+            </a>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/grievances}" class="sidebar-link">
+                <i class="ph ph-chat-centered-dots"></i> Grievances
+            </a>
+
+            <!-- FACULTY nav -->
+            <span sec:authorize="hasRole('FACULTY')" class="sidebar-label">MY WORKSPACE</span>
+            <a sec:authorize="hasRole('FACULTY')" th:href="@{/timetable}" class="sidebar-link">
+                <i class="ph ph-calendar-check"></i> My Timetable
+            </a>
+            <a sec:authorize="hasRole('FACULTY')" th:href="@{/events}" class="sidebar-link">
+                <i class="ph ph-megaphone"></i> Events
+            </a>
+
+            <!-- STUDENT nav -->
+            <span sec:authorize="hasRole('STUDENT')" class="sidebar-label">MY WORKSPACE</span>
+            <a sec:authorize="hasRole('STUDENT')" th:href="@{/timetable}" class="sidebar-link">
+                <i class="ph ph-calendar-check"></i> My Timetable
+            </a>
+            <a sec:authorize="hasRole('STUDENT')" th:href="@{/grievances}" class="sidebar-link">
+                <i class="ph ph-chat-centered-dots"></i> Grievances
+            </a>
+            <a sec:authorize="hasRole('STUDENT')" th:href="@{/events}" class="sidebar-link">
+                <i class="ph ph-megaphone"></i> Events
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar"><i class="ph ph-user"></i></div>
+                <div>
+                    <span class="sidebar-username" sec:authentication="name">User</span>
+                    <span class="sidebar-role" sec:authorize="hasRole('ADMIN')">Administrator</span>
+                    <span class="sidebar-role" sec:authorize="hasRole('FACULTY')">Faculty</span>
+                    <span class="sidebar-role" sec:authorize="hasRole('STUDENT')">Student</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <main class="dash-main">
+        <!-- Top Header -->
+        <header class="dash-header">
+            <div class="dash-breadcrumb">
+                <i class="ph ph-house" style="color:var(--accent);"></i>
+                <span>/</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="dash-header-right">
+                <div class="dash-greeting">
+                    Welcome back, <strong sec:authentication="name" style="color:var(--accent);">User</strong>
+                </div>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <button type="submit" class="btn-logout">
+                        <i class="ph ph-sign-out"></i> Logout
+                    </button>
+                </form>
+            </div>
+        </header>
 
         <!-- ==================== ADMIN DASHBOARD ==================== -->
-        <div sec:authorize="hasRole('ADMIN')" class="dashboard-grid">
-            <h2 style="grid-column: 1 / -1; color: var(--accent);">Administrator Panel</h2>
-            
-            <!-- 1. Manage Academic Data -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-books"></i> Manage Academic Data</h3>
-                <p>Configure faculty, subjects, classrooms, and time slots</p>
-                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-                    <a th:href="@{/admin/faculty}" class="btn btn-primary btn-sm">Faculty</a>
-                    <a th:href="@{/admin/subjects}" class="btn btn-primary btn-sm">Subjects</a>
-                    <a th:href="@{/admin/classrooms}" class="btn btn-primary btn-sm">Classrooms</a>
+        <div sec:authorize="hasRole('ADMIN')">
+
+            <!-- Welcome Banner -->
+            <div class="welcome-banner reveal" style="--delay:0">
+                <div class="welcome-text">
+                    <h1>Admin <span class="accent">Command Center</span></h1>
+                    <p>Manage schedules, monitor grievances, and oversee all campus operations from one place.</p>
+                </div>
+                <div class="welcome-actions">
+                    <a th:href="@{/timetable/generate}" class="btn btn-primary">
+                        <i class="ph ph-lightning"></i> Generate Timetable
+                    </a>
+                    <a th:href="@{/events/new}" class="btn btn-secondary">
+                        <i class="ph ph-plus-circle"></i> New Event
+                    </a>
                 </div>
             </div>
 
-            <!-- 2. Generate Timetable -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-calendar-check"></i> Generate Timetable</h3>
-                <p>Create conflict-free schedules with constraint validation</p>
-                <a th:href="@{/timetable/generate}" class="btn btn-primary">Generate Timetable</a>
+            <!-- Quick Stats Row -->
+            <div class="dash-stats-row">
+                <div class="dash-stat-card reveal" style="--delay:1">
+                    <div class="stat-icon stat-icon-teal"><i class="ph ph-calendar-check"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" th:text="${timetableCount != null ? timetableCount : '—'}">—</span>
+                        <span class="stat-label">Scheduled Classes</span>
+                    </div>
+                </div>
+                <div class="dash-stat-card reveal" style="--delay:2">
+                    <div class="stat-icon stat-icon-amber"><i class="ph ph-warning-circle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" th:text="${pendingGrievanceCount != null ? pendingGrievanceCount : '—'}">—</span>
+                        <span class="stat-label">Pending Grievances</span>
+                    </div>
+                </div>
+                <div class="dash-stat-card reveal" style="--delay:3">
+                    <div class="stat-icon stat-icon-blue"><i class="ph ph-chalkboard-teacher"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" th:text="${facultyCount != null ? facultyCount : '—'}">—</span>
+                        <span class="stat-label">Faculty Members</span>
+                    </div>
+                </div>
+                <div class="dash-stat-card reveal" style="--delay:4">
+                    <div class="stat-icon stat-icon-green"><i class="ph ph-buildings"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" th:text="${classroomCount != null ? classroomCount : '—'}">—</span>
+                        <span class="stat-label">Classrooms</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- 3. Dynamic Rescheduling -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-arrows-clockwise"></i> Dynamic Rescheduling</h3>
-                <p>Handle schedule changes and conflicts</p>
-                <a th:href="@{/timetable}" class="btn btn-primary">View &amp; Reschedule</a>
-            </div>
+            <!-- Data Widgets Grid -->
+            <div class="dash-widgets-grid">
 
-            <!-- 4. Manage Events -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-megaphone"></i> Manage Events</h3>
-                <p>Create, update, and publish campus events</p>
-                <a th:href="@{/events/new}" class="btn btn-primary">Create Event</a>
-            </div>
+                <!-- Widget: Quick Actions -->
+                <div class="dash-widget reveal" style="--delay:5">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-rocket-launch"></i> Quick Actions</h3>
+                    </div>
+                    <div class="widget-body">
+                        <a th:href="@{/admin/faculty}" class="action-row">
+                            <div class="action-icon"><i class="ph ph-user-plus"></i></div>
+                            <div class="action-text">
+                                <span>Manage Faculty</span>
+                                <small>Add, edit, or remove faculty members</small>
+                            </div>
+                            <i class="ph ph-caret-right action-arrow"></i>
+                        </a>
+                        <a th:href="@{/admin/subjects}" class="action-row">
+                            <div class="action-icon"><i class="ph ph-books"></i></div>
+                            <div class="action-text">
+                                <span>Manage Subjects</span>
+                                <small>Configure course curriculum</small>
+                            </div>
+                            <i class="ph ph-caret-right action-arrow"></i>
+                        </a>
+                        <a th:href="@{/admin/classrooms}" class="action-row">
+                            <div class="action-icon"><i class="ph ph-buildings"></i></div>
+                            <div class="action-text">
+                                <span>Manage Classrooms</span>
+                                <small>Room allocation &amp; availability</small>
+                            </div>
+                            <i class="ph ph-caret-right action-arrow"></i>
+                        </a>
+                        <a th:href="@{/timetable}" class="action-row">
+                            <div class="action-icon"><i class="ph ph-arrows-clockwise"></i></div>
+                            <div class="action-text">
+                                <span>Reschedule / Override</span>
+                                <small>Faculty leave &amp; manual edits</small>
+                            </div>
+                            <i class="ph ph-caret-right action-arrow"></i>
+                        </a>
+                    </div>
+                </div>
 
-            <!-- 5. Monitor Grievances -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-chat-centered-dots"></i> Monitor Grievances</h3>
-                <p>View and respond to student grievances</p>
-                <a th:href="@{/grievances}" class="btn btn-primary">View Grievances</a>
-            </div>
+                <!-- Widget: Grievances Overview -->
+                <div class="dash-widget reveal" style="--delay:6">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-chat-centered-dots"></i> Grievances</h3>
+                        <a th:href="@{/grievances}" class="widget-link">View All <i class="ph ph-arrow-right"></i></a>
+                    </div>
+                    <div class="widget-body">
+                        <div class="widget-metric-row">
+                            <div class="widget-metric">
+                                <span class="badge badge-pending">Pending</span>
+                                <span class="metric-value" th:text="${pendingGrievanceCount != null ? pendingGrievanceCount : '0'}">0</span>
+                            </div>
+                            <div class="widget-metric">
+                                <span class="badge badge-progress">In Progress</span>
+                                <span class="metric-value">—</span>
+                            </div>
+                            <div class="widget-metric">
+                                <span class="badge badge-resolved">Resolved</span>
+                                <span class="metric-value">—</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:20px;">
+                            <a th:href="@{/grievances/analytics}" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;">
+                                <i class="ph ph-chart-bar"></i> View Analytics Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- 6. Analytics -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-chart-bar"></i> Analytics</h3>
-                <p>View grievance trends and statistics</p>
-                <a th:href="@{/grievances/analytics}" class="btn btn-primary">View Analytics</a>
+                <!-- Widget: Upcoming Events -->
+                <div class="dash-widget widget-wide reveal" style="--delay:7">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-calendar-star"></i> Campus Events</h3>
+                        <a th:href="@{/events}" class="widget-link">Manage <i class="ph ph-arrow-right"></i></a>
+                    </div>
+                    <div class="widget-body">
+                        <div class="widget-empty">
+                            <i class="ph ph-calendar-blank" style="font-size:2rem;color:var(--text-muted);"></i>
+                            <p>Schedule counts and events will appear here once data is added.</p>
+                            <a th:href="@{/events/new}" class="btn btn-primary btn-sm" style="margin-top:12px;">
+                                <i class="ph ph-plus-circle"></i> Create First Event
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- ==================== FACULTY DASHBOARD ==================== -->
-        <div sec:authorize="hasRole('FACULTY')" class="dashboard-grid">
-            <h2 style="grid-column: 1 / -1; color: var(--accent);">Faculty Panel</h2>
-            
-            <!-- 1. View Assigned Timetable -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-calendar-check"></i> View Assigned Timetable</h3>
-                <p>Check your teaching schedule and classroom details</p>
-                <a th:href="@{/timetable}" class="btn btn-primary">View My Timetable</a>
+        <div sec:authorize="hasRole('FACULTY')">
+            <div class="welcome-banner reveal" style="--delay:0">
+                <div class="welcome-text">
+                    <h1>Faculty <span class="accent">Workspace</span></h1>
+                    <p>View your teaching schedule and stay updated on campus activities.</p>
+                </div>
+                <div class="welcome-actions">
+                    <a th:href="@{/timetable}" class="btn btn-primary">
+                        <i class="ph ph-calendar-check"></i> My Timetable
+                    </a>
+                </div>
             </div>
 
-            <!-- 2. View Campus Events -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-megaphone"></i> View Campus Events</h3>
-                <p>Browse upcoming institutional events</p>
-                <a th:href="@{/events}" class="btn btn-primary">View Events</a>
+            <div class="dash-widgets-grid">
+                <div class="dash-widget reveal" style="--delay:1">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-calendar-check"></i> My Teaching Schedule</h3>
+                        <a th:href="@{/timetable}" class="widget-link">Open <i class="ph ph-arrow-right"></i></a>
+                    </div>
+                    <div class="widget-body">
+                        <div class="widget-empty">
+                            <i class="ph ph-chalkboard-teacher" style="font-size:2rem;color:var(--accent);"></i>
+                            <p>View your assigned classes, rooms, and time slots for the semester.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-widget reveal" style="--delay:2">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-megaphone"></i> Campus Events</h3>
+                        <a th:href="@{/events}" class="widget-link">Browse <i class="ph ph-arrow-right"></i></a>
+                    </div>
+                    <div class="widget-body">
+                        <div class="widget-empty">
+                            <i class="ph ph-calendar-star" style="font-size:2rem;color:var(--accent);"></i>
+                            <p>Stay informed about upcoming seminars, workshops, and campus activities.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- ==================== STUDENT DASHBOARD ==================== -->
-        <div sec:authorize="hasRole('STUDENT')" class="dashboard-grid">
-            <h2 style="grid-column: 1 / -1; color: var(--accent);">Student Panel</h2>
-            
-            <!-- 1. View Personal Timetable -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-calendar-check"></i> View Personal Timetable</h3>
-                <p>Check your class schedule</p>
-                <a th:href="@{/timetable}" class="btn btn-primary">View My Timetable</a>
+        <div sec:authorize="hasRole('STUDENT')">
+            <div class="welcome-banner reveal" style="--delay:0">
+                <div class="welcome-text">
+                    <h1>Student <span class="accent">Portal</span></h1>
+                    <p>Check your schedule, submit grievances, and explore campus events.</p>
+                </div>
+                <div class="welcome-actions">
+                    <a th:href="@{/timetable}" class="btn btn-primary">
+                        <i class="ph ph-calendar-check"></i> My Timetable
+                    </a>
+                    <a th:href="@{/grievances/new}" class="btn btn-secondary">
+                        <i class="ph ph-pencil-simple"></i> Submit Grievance
+                    </a>
+                </div>
             </div>
 
-            <!-- 2. Submit Grievance -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-chat-centered-dots"></i> Submit Grievance</h3>
-                <p>Report academic or infrastructure issues</p>
-                <a th:href="@{/grievances/new}" class="btn btn-primary">Submit Grievance</a>
-            </div>
-
-            <!-- 3. View Campus Events -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-megaphone"></i> View Campus Events</h3>
-                <p>Browse upcoming campus activities</p>
-                <a th:href="@{/events}" class="btn btn-primary">View Events</a>
-            </div>
-
-            <!-- 4. My Grievances -->
-            <div class="dashboard-card">
-                <h3><i class="ph ph-clipboard-text"></i> My Grievances</h3>
-                <p>Track status of your submitted grievances</p>
-                <a th:href="@{/grievances}" class="btn btn-primary">View My Grievances</a>
+            <div class="dash-widgets-grid">
+                <div class="dash-widget reveal" style="--delay:1">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-calendar-check"></i> My Class Schedule</h3>
+                        <a th:href="@{/timetable}" class="widget-link">Open <i class="ph ph-arrow-right"></i></a>
+                    </div>
+                    <div class="widget-body">
+                        <div class="widget-empty">
+                            <i class="ph ph-student" style="font-size:2rem;color:var(--accent);"></i>
+                            <p>View your assigned classes, faculty, and rooms for the current semester.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-widget reveal" style="--delay:2">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-clipboard-text"></i> My Grievances</h3>
+                        <a th:href="@{/grievances}" class="widget-link">View All <i class="ph ph-arrow-right"></i></a>
+                    </div>
+                    <div class="widget-body">
+                        <div class="widget-empty">
+                            <i class="ph ph-chat-centered-dots" style="font-size:2rem;color:var(--text-muted);"></i>
+                            <p>Track the status of your submitted grievances and view admin responses.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-widget reveal" style="--delay:3">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-megaphone"></i> Campus Events</h3>
+                        <a th:href="@{/events}" class="widget-link">Browse <i class="ph ph-arrow-right"></i></a>
+                    </div>
+                    <div class="widget-body">
+                        <div class="widget-empty">
+                            <i class="ph ph-calendar-star" style="font-size:2rem;color:var(--accent);"></i>
+                            <p>Discover upcoming workshops, seminars, cultural fests, and sports events.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <footer class="footer">
-        <p>&copy; 2024 AcadSched. All rights reserved.</p>
-    </footer>
+    <!-- ═══════ IntersectionObserver Scroll Reveal ═══════ -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var reveals = document.querySelectorAll('.reveal');
+        if (!reveals.length) return;
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var delay = parseInt(entry.target.style.getPropertyValue('--delay') || 0) * 100;
+                    setTimeout(function() {
+                        entry.target.classList.add('revealed');
+                    }, delay);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.08 });
+
+        reveals.forEach(function(el) {
+            observer.observe(el);
+        });
+    });
+    </script>
 </body>
 </html>

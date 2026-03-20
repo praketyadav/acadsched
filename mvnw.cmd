@@ -7,8 +7,19 @@ title %0
 
 set ERROR_CODE=0
 
+@REM Find java.exe
+where java >nul 2>nul
+if %ERRORLEVEL% equ 0 (
+    set JAVA_CMD=java
+) else if defined JAVA_HOME (
+    set JAVA_CMD="%JAVA_HOME%\bin\java.exe"
+) else (
+    echo ERROR: JAVA_HOME is not set and java is not in PATH.
+    exit /B 1
+)
+
 @REM Execute Maven
-"%JAVA_HOME%\bin\java.exe" -classpath .mvn\wrapper\maven-wrapper.jar "-Dmaven.multiModuleProjectDirectory=%MAVEN_PROJECTBASEDIR%" org.apache.maven.wrapper.MavenWrapperMain %*
+%JAVA_CMD% -classpath .mvn\wrapper\maven-wrapper.jar "-Dmaven.multiModuleProjectDirectory=%CD%" org.apache.maven.wrapper.MavenWrapperMain %*
 if ERRORLEVEL 1 goto error
 goto end
 
