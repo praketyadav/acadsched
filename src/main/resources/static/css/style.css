@@ -1724,3 +1724,340 @@ body.has-sidebar .footer { display: none; }
     .dash-header { padding: 14px 16px; }
     .welcome-text h1 { font-size: 1.5rem; }
 }
+
+/* ============================================================
+   TIMETABLE — Light-Theme Paper Grid
+   ============================================================ */
+
+.timetable-paper {
+    background: #F9FAFB;
+    border-radius: 16px;
+    padding: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow-x: auto;
+}
+
+.timetable-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #FFFFFF;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.timetable-grid thead th {
+    background: #111827;
+    color: #F9FAFB;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 14px 16px;
+    text-align: center;
+    border: none;
+}
+
+.timetable-grid thead th.tt-corner {
+    background: #1F2937;
+    text-align: left;
+    font-size: 0.78rem;
+    color: #9CA3AF;
+}
+
+.timetable-grid td {
+    border: 1px solid #E5E7EB;
+    padding: 6px;
+    vertical-align: top;
+    min-width: 140px;
+    min-height: 60px;
+    background: #FFFFFF;
+}
+
+.timetable-grid td.tt-time {
+    background: #F3F4F6;
+    color: #374151;
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 100px;
+    padding: 14px 12px;
+}
+
+.timetable-grid td.tt-cell {
+    transition: background 0.2s;
+}
+
+.timetable-grid td.tt-cell:hover {
+    background: #F0FDFA;
+}
+
+.tt-slot-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    background: linear-gradient(135deg, #ECFDF5, #F0FDFA);
+    border-left: 3px solid #10B981;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.tt-slot-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16,185,129,0.18);
+}
+
+.tt-subject {
+    font-weight: 700;
+    color: #111827;
+    font-size: 0.85rem;
+}
+
+.tt-detail {
+    color: #6B7280;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tt-detail i {
+    color: #9CA3AF;
+    font-size: 0.8rem;
+}
+
+/* ============================================================
+   TOGGLE SWITCH (Lunch Break)
+   ============================================================ */
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #333;
+    border-radius: 26px;
+    transition: background 0.3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: #00BFA6;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(22px);
+}
+
+/* ============================================================
+   DRAG-AND-DROP FILE UPLOAD ZONE
+   ============================================================ */
+
+.dropzone {
+    border: 2px dashed #333;
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+    background: rgba(255,255,255,0.02);
+    margin: 16px 0;
+}
+
+.dropzone:hover,
+.dropzone.drag-over {
+    border-color: #00BFA6;
+    background: rgba(0,191,166,0.06);
+}
+
+.dropzone-icon {
+    font-size: 2rem;
+    color: #555;
+    margin-bottom: 8px;
+    transition: color 0.3s;
+}
+
+.dropzone:hover .dropzone-icon,
+.dropzone.drag-over .dropzone-icon {
+    color: #00BFA6;
+}
+
+.dropzone-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.dropzone-text strong {
+    color: #00BFA6;
+}
+
+.dropzone-hint {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-top: 6px;
+}
+
+.dropzone-loading {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.dropzone-loading.active {
+    display: flex;
+}
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: toastIn 0.35s ease-out;
+    max-width: 380px;
+}
+
+.toast-success {
+    background: #065F46;
+    color: #D1FAE5;
+    border-left: 4px solid #10B981;
+}
+
+.toast-error {
+    background: #7F1D1D;
+    color: #FEE2E2;
+    border-left: 4px solid #EF4444;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================================
+   SAVED TIMETABLES DIRECTORY CARDS
+   ============================================================ */
+
+.tt-dir-card {
+    background: #1E1E20;
+    border: 1px solid #2a2a30;
+    border-radius: 14px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+    animation: dirCardIn 0.4s ease-out both;
+}
+
+.tt-dir-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 191, 166, 0.12);
+    border-color: rgba(0, 191, 166, 0.3);
+}
+
+@keyframes dirCardIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.tt-dir-icon {
+    font-size: 2rem;
+    color: #00BFA6;
+    margin-bottom: 6px;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 191, 166, 0.08);
+    border-radius: 12px;
+}
+
+.tt-dir-semester {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f3f4f6;
+}
+
+.tt-dir-section {
+    font-size: 0.88rem;
+    color: #9CA3AF;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.tt-dir-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px;
+    background: #00BFA6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+}
+
+.tt-dir-btn:hover {
+    background: #00a892;
+    transform: translateY(-1px);
+}
+
+.tt-dir-btn i {
+    transition: transform 0.2s;
+}
+
+.tt-dir-btn:hover i {
+    transform: translateX(3px);
+}

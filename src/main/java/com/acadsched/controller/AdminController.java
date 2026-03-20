@@ -4,6 +4,7 @@ import com.acadsched.model.Classroom;
 import com.acadsched.model.Faculty;
 import com.acadsched.model.Subject;
 import com.acadsched.service.ClassroomService;
+import com.acadsched.service.CsvImportService;
 import com.acadsched.service.FacultyService;
 import com.acadsched.service.SubjectService;
 import lombok.RequiredArgsConstructor;
@@ -11,8 +12,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/admin")
@@ -22,9 +25,10 @@ public class AdminController {
     private final FacultyService facultyService;
     private final SubjectService subjectService;
     private final ClassroomService classroomService;
+    private final CsvImportService csvImportService;
 
     // =============== FACULTY MANAGEMENT ===============
-    
+
     @GetMapping("/faculty")
     public String listFaculty(Model model) {
         model.addAttribute("faculties", facultyService.getAllFaculty());
@@ -38,7 +42,7 @@ public class AdminController {
     }
 
     @PostMapping("/faculty/new")
-    public String createFaculty(@Valid @ModelAttribute Faculty faculty, 
+    public String createFaculty(@Valid @ModelAttribute Faculty faculty,
                                BindingResult result, Model model) {
         if (result.hasErrors()) {
             return "admin/faculty-form";
@@ -61,7 +65,7 @@ public class AdminController {
     }
 
     @PostMapping("/faculty/{id}/edit")
-    public String updateFaculty(@PathVariable Long id, 
+    public String updateFaculty(@PathVariable Long id,
                                @Valid @ModelAttribute Faculty faculty,
                                BindingResult result) {
         if (result.hasErrors()) {
@@ -84,7 +88,7 @@ public class AdminController {
     }
 
     // =============== SUBJECT MANAGEMENT ===============
-    
+
     @GetMapping("/subjects")
     public String listSubjects(Model model) {
         model.addAttribute("subjects", subjectService.getAllSubjects());
@@ -99,7 +103,7 @@ public class AdminController {
     }
 
     @PostMapping("/subjects/new")
-    public String createSubject(@Valid @ModelAttribute Subject subject, 
+    public String createSubject(@Valid @ModelAttribute Subject subject,
                                BindingResult result, Model model) {
         if (result.hasErrors()) {
             model.addAttribute("faculties", facultyService.getAllFaculty());
@@ -119,7 +123,7 @@ public class AdminController {
     }
 
     @PostMapping("/subjects/{id}/edit")
-    public String updateSubject(@PathVariable Long id, 
+    public String updateSubject(@PathVariable Long id,
                                @Valid @ModelAttribute Subject subject,
                                BindingResult result, Model model) {
         if (result.hasErrors()) {
@@ -137,7 +141,7 @@ public class AdminController {
     }
 
     // =============== CLASSROOM MANAGEMENT ===============
-    
+
     @GetMapping("/classrooms")
     public String listClassrooms(Model model) {
         model.addAttribute("classrooms", classroomService.getAllClassrooms());
@@ -151,7 +155,7 @@ public class AdminController {
     }
 
     @PostMapping("/classrooms/new")
-    public String createClassroom(@Valid @ModelAttribute Classroom classroom, 
+    public String createClassroom(@Valid @ModelAttribute Classroom classroom,
                                  BindingResult result) {
         if (result.hasErrors()) {
             return "admin/classroom-form";
@@ -169,7 +173,7 @@ public class AdminController {
     }
 
     @PostMapping("/classrooms/{id}/edit")
-    public String updateClassroom(@PathVariable Long id, 
+    public String updateClassroom(@PathVariable Long id,
                                  @Valid @ModelAttribute Classroom classroom,
                                  BindingResult result) {
         if (result.hasErrors()) {
@@ -189,5 +193,25 @@ public class AdminController {
     public String toggleClassroomAvailability(@PathVariable Long id) {
         classroomService.toggleAvailability(id);
         return "redirect:/admin/classrooms";
+    }
+
+    // =============== CSV BULK IMPORT ENDPOINTS ===============
+
+    @PostMapping("/faculty/import")
+    @ResponseBody
+    public Map<String, Object> importFaculty(@RequestParam("file") MultipartFile file) {
+        return csvImportService.importFaculty(file);
+    }
+
+    @PostMapping("/subjects/import")
+    @ResponseBody
+    public Map<String, Object> importSubjects(@RequestParam("file") MultipartFile file) {
+        return csvImportService.importSubjects(file);
+    }
+
+    @PostMapping("/classrooms/import")
+    @ResponseBody
+    public Map<String, Object> importClassrooms(@RequestParam("file") MultipartFile file) {
+        return csvImportService.importClassrooms(file);
     }
 }

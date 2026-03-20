@@ -38,9 +38,21 @@
             Faculty deleted successfully!
         </div>
 
-        <div style="margin: 20px 0;">
+        <div style="margin: 20px 0; display: flex; gap: 12px; align-items: center;">
             <a th:href="@{/admin/faculty/new}" class="btn btn-primary"><i class="ph ph-plus"></i> Add New Faculty</a>
         </div>
+
+        <!-- CSV Drag-and-Drop Upload Zone -->
+        <div class="dropzone" id="facultyDropzone">
+            <div class="dropzone-icon"><i class="ph ph-upload-simple"></i></div>
+            <div class="dropzone-text">Drag &amp; drop a <strong>.csv</strong> file here, or <strong>click to browse</strong></div>
+            <div class="dropzone-hint">Columns: name, facultyId, department, email, phoneNumber</div>
+            <input type="file" id="facultyFileInput" accept=".csv" style="display:none">
+        </div>
+        <div class="dropzone-loading" id="facultyLoading">
+            <i class="ph ph-spinner ph-spin"></i> Importing faculty data...
+        </div>
+        <div class="toast-container" id="toastContainer"></div>
 
         <div th:if="${faculties != null and !faculties.isEmpty()}">
             <table>
@@ -91,5 +103,54 @@
     <footer class="footer">
         <p>&copy; 2024 AcadSched. All rights reserved.</p>
     </footer>
+
+<script>
+(function() {
+    const dz = document.getElementById('facultyDropzone');
+    const fi = document.getElementById('facultyFileInput');
+    const loading = document.getElementById('facultyLoading');
+    const tc = document.getElementById('toastContainer');
+    if (!dz) return;
+
+    dz.addEventListener('click', () => fi.click());
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); uploadFile(e.dataTransfer.files[0]); });
+    fi.addEventListener('change', () => { if (fi.files[0]) uploadFile(fi.files[0]); });
+
+    function uploadFile(file) {
+        if (!file) return;
+        dz.style.display = 'none';
+        loading.classList.add('active');
+        const fd = new FormData();
+        fd.append('file', file);
+        fetch('/admin/faculty/import', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                loading.classList.remove('active');
+                dz.style.display = '';
+                if (data.success) {
+                    showToast('Imported ' + data.count + ' faculty records!', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.errors ? data.errors.join('; ') : 'Import failed', 'error');
+                }
+            })
+            .catch(() => {
+                loading.classList.remove('active');
+                dz.style.display = '';
+                showToast('Network error during import', 'error');
+            });
+    }
+
+    function showToast(msg, type) {
+        const t = document.createElement('div');
+        t.className = 'toast toast-' + type;
+        t.textContent = msg;
+        tc.appendChild(t);
+        setTimeout(() => t.remove(), 5000);
+    }
+})();
+</script>
 </body>
 </html>

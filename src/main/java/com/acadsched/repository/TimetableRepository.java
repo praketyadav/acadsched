@@ -54,6 +54,10 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
                                                        @Param("day") String day, 
                                                        @Param("slot") String slot);
     
+    // Fetch distinct (semester, section) pairs for the Saved Timetables directory
+    @Query("SELECT DISTINCT t.semester, t.classGroup.section FROM Timetable t ORDER BY t.semester, t.classGroup.section")
+    List<Object[]> findDistinctSemesterSections();
+
     // Check class group conflicts
     @Query("SELECT t FROM Timetable t WHERE t.classGroup.id = :classGroupId AND t.dayOfWeek = :day AND t.timeSlot = :slot")
     List<Timetable> findByClassGroupAndDayAndTimeSlot(@Param("classGroupId") Long classGroupId,

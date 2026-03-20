@@ -53,14 +53,18 @@ public class SchedulingService {
 
     @Transactional
     public List<Timetable> generateTimetable(String semester, String section) {
-        // Backward-compatible overload — defaults to 1 gap hour
-        return generateTimetable(semester, section, 1);
+        return generateTimetable(semester, section, 1, false);
     }
 
     @Transactional
     public List<Timetable> generateTimetable(String semester, String section, int studentGapHours) {
-        log.info("Generating timetable for semester: {} section: {} gapHours: {}",
-                 semester, section, studentGapHours);
+        return generateTimetable(semester, section, studentGapHours, false);
+    }
+
+    @Transactional
+    public List<Timetable> generateTimetable(String semester, String section, int studentGapHours, boolean enforceLunchBreak) {
+        log.info("Generating timetable for semester: {} section: {} gapHours: {} lunchBreak: {}",
+                 semester, section, studentGapHours, enforceLunchBreak);
 
         // Clamp gap hours to a sane range (0–3)
         studentGapHours = Math.max(0, Math.min(studentGapHours, 3));
@@ -132,7 +136,7 @@ public class SchedulingService {
             // Build a round-robin ordered list of (day, time) pairs so that
             // sessions spread evenly across the week instead of piling up
             // on Monday/Tuesday.
-            List<String[]> slotOrder = buildRoundRobinSlots();
+            List<String[]> slotOrder = buildRoundRobinSlots(enforceLunchBreak);
 
             int assigned = 0;
             for (String[] slot : slotOrder) {
@@ -194,9 +198,11 @@ public class SchedulingService {
      * Pattern:  Mon-slot1, Tue-slot1, Wed-slot1 … Fri-slot1, Mon-slot2, …
      * This prevents the greedy "fill Monday first" problem.
      */
-    private List<String[]> buildRoundRobinSlots() {
+    private List<String[]> buildRoundRobinSlots(boolean enforceLunchBreak) {
         List<String[]> slots = new ArrayList<>();
         for (String time : TIME_SLOTS) {
+            // Skip the lunch break slot if enforced
+            if (enforceLunchBreak && "12:00-13:00".equals(time)) continue;
             for (String day : DAYS) {
                 slots.add(new String[]{day, time});
             }
@@ -414,6 +420,21 @@ public class SchedulingService {
 
     public List<Timetable> getTimetableBySemesterAndSection(String semester, String section) {
         return timetableRepository.findBySemester(semester);
+    }
+
+    /**
+     * Returns all distinct (semester, section) pairs from the database
+     * as a list of maps with keys "semester" and "section".
+     */
+    public List<Map<String, String>> getAvailableTimetables() {
+        return timetableRepository.findDistinctSemesterSections().stream()
+                .map(row -> {
+                    Map<String, String> m = new LinkedHashMap<>();
+                    m.put("semester", (String) row[0]);
+                    m.put("section",  (String) row[1]);
+                    return m;
+                })
+                .toList();
     }
 
     public List<Timetable> getFacultyTimetable(Long facultyId) {

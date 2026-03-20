@@ -28,6 +28,7 @@ public class TimetableController {
     public String viewTimetable(Model model) {
         model.addAttribute("faculties", facultyService.getAllFaculty());
         model.addAttribute("classrooms", classroomService.getAllClassrooms());
+        model.addAttribute("availableTimetables", schedulingService.getAvailableTimetables());
         return "timetable/view";
     }
 
@@ -40,10 +41,11 @@ public class TimetableController {
     public String generateTimetable(@RequestParam String semester,
                                     @RequestParam String section,
                                     @RequestParam(defaultValue = "1") int studentGapHours,
+                                    @RequestParam(defaultValue = "false") boolean enforceLunchBreak,
                                     Model model) {
         try {
             List<Timetable> schedule = schedulingService.generateTimetable(
-                    semester, section, studentGapHours);
+                    semester, section, studentGapHours, enforceLunchBreak);
             model.addAttribute("schedule", schedule);
             model.addAttribute("semester", semester);
             model.addAttribute("section", section);

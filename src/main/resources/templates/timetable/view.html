@@ -132,79 +132,119 @@
             </a>
         </div>
 
-        <!-- ═══════ View Filter ═══════ -->
+        <!-- ═══════ View Filter (Dynamic Dropdowns) ═══════ -->
         <div class="filter-section">
             <h3 style="margin-bottom: 15px;"><i class="ph ph-magnifying-glass"></i> View Timetable</h3>
             <form th:action="@{/timetable/view}" method="get" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="semester">Semester</label>
-                    <input type="text" id="semester" name="semester" th:value="${semester}" placeholder="e.g., Fall 2024" required>
+                    <select id="semester" name="semester" required>
+                        <option value="">Select Semester</option>
+                        <option th:each="tt : ${availableTimetables}"
+                                th:value="${tt['semester']}"
+                                th:text="${tt['semester']}"
+                                th:selected="${semester != null and semester == tt['semester']}"></option>
+                    </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="section">Section</label>
-                    <input type="text" id="section" name="section" th:value="${section}" placeholder="e.g., A" required>
+                    <select id="section" name="section" required>
+                        <option value="">Select Section</option>
+                        <option th:each="tt : ${availableTimetables}"
+                                th:value="${tt['section']}"
+                                th:text="${'Section ' + tt['section']}"
+                                th:selected="${section != null and section == tt['section']}"></option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary">View</button>
             </form>
         </div>
 
-        <!-- ═══════ Timetable Grid ═══════ -->
+        <!-- ═══════ Saved Timetables Directory ═══════ -->
+        <div th:if="${schedule == null or schedule.isEmpty()}">
+            <div th:if="${availableTimetables != null and !availableTimetables.isEmpty()}">
+                <h2 style="margin: 28px 0 18px; font-size: 1.25rem;">
+                    <i class="ph ph-folder-open" style="color: var(--accent);"></i> Saved Timetables
+                </h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+                    <div th:each="tt, stat : ${availableTimetables}"
+                         class="tt-dir-card"
+                         th:style="'animation-delay:' + ${stat.index * 80} + 'ms'">
+                        <div class="tt-dir-icon"><i class="ph ph-calendar-check"></i></div>
+                        <div class="tt-dir-semester" th:text="${tt['semester']}">Fall 2025</div>
+                        <div class="tt-dir-section" th:text="${'Section ' + tt['section']}">Section A</div>
+                        <a th:href="@{/timetable/view(semester=${tt['semester']}, section=${tt['section']})}"
+                           class="tt-dir-btn">
+                            View Schedule <i class="ph ph-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${availableTimetables == null or availableTimetables.isEmpty()}" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; color: var(--text-muted); margin-bottom: 12px;"><i class="ph ph-calendar-blank"></i></div>
+                <p style="color: var(--text-secondary);">No timetables have been generated yet.
+                    <a th:href="@{/timetable/generate}" style="color: var(--accent);">Generate one now</a>.
+                </p>
+            </div>
+        </div>
+
+        <!-- ═══════ Timetable Grid (Light-Theme Pivot) ═══════ -->
         <div th:if="${schedule != null and !schedule.isEmpty()}" id="timetableGrid">
             <h2 th:if="${semester != null and section != null}" style="margin: 24px 0 16px;">
                 Timetable: <span th:text="${semester}"></span> — Section <span th:text="${section}"></span>
                 <span sec:authorize="hasRole('ADMIN')" style="font-size: 0.75rem; color: var(--text-muted); font-weight:400; margin-left: 12px;">
-                    <i class="ph ph-pencil-simple"></i> Click any row to edit
+                    <i class="ph ph-pencil-simple"></i> Click any cell to edit
                 </span>
             </h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Day</th>
-                        <th>Time Slot</th>
-                        <th>Subject</th>
-                        <th>Faculty</th>
-                        <th>Classroom</th>
-                        <th>Section</th>
-                    </tr>
-                </thead>
-                <tbody id="timetableBody">
-                    <tr th:each="entry : ${schedule}"
-                        sec:authorize="hasRole('ADMIN')"
-                        class="admin-editable"
-                        th:data-id="${entry.id}"
-                        th:data-day="${entry.dayOfWeek}"
-                        th:data-time="${entry.timeSlot}"
-                        th:data-subject="${entry.subject.name}"
-                        th:data-faculty-id="${entry.faculty.id}"
-                        th:data-faculty-name="${entry.faculty.name}"
-                        th:data-classroom-id="${entry.classroom.id}"
-                        th:data-classroom-name="${entry.classroom.roomNumber}"
-                        th:data-section="${entry.classGroup.section}"
-                        onclick="openEditModal(this)">
-                        <td th:text="${entry.dayOfWeek}"></td>
-                        <td th:text="${entry.timeSlot}"></td>
-                        <td th:text="${entry.subject.name}"></td>
-                        <td th:text="${entry.faculty.name}"></td>
-                        <td th:text="${entry.classroom.roomNumber}"></td>
-                        <td th:text="${entry.classGroup.section}"></td>
-                    </tr>
-                    <!--/* Non-admin rows (no interactive features) */-->
-                    <tr th:each="entry : ${schedule}"
-                        sec:authorize="!hasRole('ADMIN')">
-                        <td th:text="${entry.dayOfWeek}"></td>
-                        <td th:text="${entry.timeSlot}"></td>
-                        <td th:text="${entry.subject.name}"></td>
-                        <td th:text="${entry.faculty.name}"></td>
-                        <td th:text="${entry.classroom.roomNumber}"></td>
-                        <td th:text="${entry.classGroup.section}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
 
-        <div th:if="${schedule == null or schedule.isEmpty()}" style="text-align: center; padding: 40px;">
-            <div style="font-size: 3rem; color: var(--text-muted); margin-bottom: 12px;"><i class="ph ph-calendar-blank"></i></div>
-            <p style="color: var(--text-secondary);">No timetable available. Generate one or search by semester/section above.</p>
+            <div class="timetable-paper">
+                <table class="timetable-grid">
+                    <thead>
+                        <tr>
+                            <th class="tt-corner">Time / Day</th>
+                            <th>Monday</th>
+                            <th>Tuesday</th>
+                            <th>Wednesday</th>
+                            <th>Thursday</th>
+                            <th>Friday</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="timeSlot : ${ {'09:00-10:00','10:00-11:00','11:00-12:00','12:00-13:00','14:00-15:00','15:00-16:00','16:00-17:00'} }">
+                            <td class="tt-time" th:text="${timeSlot}"></td>
+                            <td th:each="day : ${ {'MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'} }"
+                                class="tt-cell">
+                                <th:block th:each="entry : ${schedule}" th:if="${entry.dayOfWeek == day and entry.timeSlot == timeSlot}">
+                                    <div class="tt-slot-card"
+                                         sec:authorize="hasRole('ADMIN')"
+                                         style="cursor:pointer;"
+                                         th:data-id="${entry.id}"
+                                         th:data-day="${entry.dayOfWeek}"
+                                         th:data-time="${entry.timeSlot}"
+                                         th:data-subject="${entry.subject.name}"
+                                         th:data-faculty-id="${entry.faculty.id}"
+                                         th:data-faculty-name="${entry.faculty.name}"
+                                         th:data-classroom-id="${entry.classroom.id}"
+                                         th:data-classroom-name="${entry.classroom.roomNumber}"
+                                         th:data-section="${entry.classGroup.section}"
+                                         onclick="openEditModal(this)">
+                                        <span class="tt-subject" th:text="${entry.subject.name}"></span>
+                                        <span class="tt-detail"><i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}"></span></span>
+                                        <span class="tt-detail"><i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}"></span></span>
+                                    </div>
+                                    <!--/* Non-admin view (no click) */-->
+                                    <div class="tt-slot-card" sec:authorize="!hasRole('ADMIN')">
+                                        <span class="tt-subject" th:text="${entry.subject.name}"></span>
+                                        <span class="tt-detail"><i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}"></span></span>
+                                        <span class="tt-detail"><i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}"></span></span>
+                                    </div>
+                                </th:block>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- ═══════ Faculty Leave Rescheduling (Admin only) ═══════ -->

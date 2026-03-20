@@ -14,4 +14,5 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
     List<Classroom> findByAvailable(Boolean available);
     List<Classroom> findByType(Classroom.RoomType type);
     List<Classroom> findByCapacityGreaterThanEqual(Integer capacity);
+    boolean existsByRoomNumber(String roomNumber);
 }
