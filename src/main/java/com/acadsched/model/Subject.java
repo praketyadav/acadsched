@@ -6,12 +6,19 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "subjects")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(exclude = {"eligibleFaculty"})
+@ToString(exclude = {"eligibleFaculty"})
 public class Subject {
 
     @Id
@@ -36,9 +43,17 @@ public class Subject {
     @NotBlank(message = "Semester is required")
     private String semester;
 
-    @ManyToOne
-    @JoinColumn(name = "faculty_id")
-    private Faculty faculty;
+    /**
+     * The pool of faculty members eligible to teach this subject.
+     * The scheduler dynamically selects one from this pool per session.
+     */
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "subject_eligible_faculty",
+        joinColumns = @JoinColumn(name = "subject_id"),
+        inverseJoinColumns = @JoinColumn(name = "faculty_id")
+    )
+    private Set<Faculty> eligibleFaculty = new HashSet<>();
 
     @Column(nullable = false)
     private Integer priority = 1; // Higher number = higher priority

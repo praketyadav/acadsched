@@ -3,7 +3,7 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>Timetable - AcadSched</title>
+    <title th:text="${isStudent ? 'My Timetable' : (isFaculty ? 'My Schedule' : 'Timetable Management')} + ' - AcadSched'">Timetable - AcadSched</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
     <style>
@@ -93,6 +93,41 @@
         transition: opacity .15s;
     }
     tr.admin-editable:hover td:last-child::after { opacity: 1; }
+
+    /* Student/Faculty info card */
+    .role-info-card {
+        display: flex; align-items: center; gap: 16px;
+        background: linear-gradient(135deg, rgba(0,191,166,0.08), rgba(0,191,166,0.02));
+        border: 1px solid rgba(0,191,166,0.2);
+        border-radius: var(--radius, 12px); padding: 20px 24px; margin-bottom: 24px;
+    }
+    .role-info-card .role-icon {
+        font-size: 2.2rem; color: #00BFA6;
+        width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;
+        background: rgba(0,191,166,0.12); border-radius: 12px;
+    }
+    .role-info-card .role-details h3 { margin: 0 0 4px; color: #f3f4f6; font-size: 1.05rem; }
+    .role-info-card .role-details p {
+        margin: 0; color: var(--text-secondary, #aaa); font-size: 0.9rem;
+    }
+    .role-info-card .role-badge {
+        margin-left: auto; padding: 6px 16px;
+        background: rgba(0,191,166,0.12); color: #00BFA6;
+        border-radius: 20px; font-weight: 600; font-size: 0.8rem;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* Not assigned state */
+    .not-assigned-card {
+        text-align: center; padding: 60px 20px;
+        background: var(--bg-card, #1a1a1e); border-radius: var(--radius, 12px);
+        border: 1px solid var(--border, #2a2a30);
+    }
+    .not-assigned-card .na-icon {
+        font-size: 4rem; color: #f59e0b; margin-bottom: 16px;
+    }
+    .not-assigned-card h2 { margin: 0 0 8px; color: #f3f4f6; }
+    .not-assigned-card p { color: var(--text-secondary, #aaa); max-width: 400px; margin: 0 auto; }
     </style>
 </head>
 <body>
@@ -113,27 +148,73 @@
     </nav>
 
     <div class="container">
-        <h1><i class="ph ph-calendar-check"></i> Timetable Management</h1>
-        
+        <!-- ═══════ Page Title (role-aware) ═══════ -->
+        <h1 th:if="${isAdmin}"><i class="ph ph-calendar-check"></i> Timetable Management</h1>
+        <h1 th:if="${isFaculty}"><i class="ph ph-calendar-check"></i> My Teaching Schedule</h1>
+        <h1 th:if="${isStudent}"><i class="ph ph-calendar-check"></i> My Timetable</h1>
+
         <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
         <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
 
-        <!-- Leave Actions Summary -->
-        <div th:if="${leaveActions}" style="background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px;">
+        <!-- ═══════ Student Info Card ═══════ -->
+        <div th:if="${isStudent and !notAssigned}" class="role-info-card">
+            <div class="role-icon"><i class="ph ph-student"></i></div>
+            <div class="role-details">
+                <h3 th:text="${studentClassGroup.name}">CSE 3rd Year</h3>
+                <p>
+                    <i class="ph ph-buildings"></i> <span th:text="${studentClassGroup.department}">Computer Science</span>
+                    &nbsp;·&nbsp;
+                    <i class="ph ph-users"></i> Section <span th:text="${studentClassGroup.section}">A</span>
+                    &nbsp;·&nbsp;
+                    <i class="ph ph-graduation-cap"></i> <span th:text="${studentClassGroup.year}">3rd Year</span>
+                </p>
+            </div>
+            <div class="role-badge">Student View</div>
+        </div>
+
+        <!-- ═══════ Faculty Info Card ═══════ -->
+        <div th:if="${isFaculty and !notAssigned}" class="role-info-card">
+            <div class="role-icon"><i class="ph ph-chalkboard-teacher"></i></div>
+            <div class="role-details">
+                <h3 th:text="${facultyProfile.name}">Dr. John Smith</h3>
+                <p>
+                    <i class="ph ph-buildings"></i> <span th:text="${facultyProfile.department}">Computer Science</span>
+                    &nbsp;·&nbsp;
+                    <i class="ph ph-identification-badge"></i> <span th:text="${facultyProfile.facultyId}">FAC001</span>
+                </p>
+            </div>
+            <div class="role-badge">Faculty View</div>
+        </div>
+
+        <!-- ═══════ Not Assigned State ═══════ -->
+        <div th:if="${notAssigned}" class="not-assigned-card">
+            <div class="na-icon"><i class="ph ph-warning-circle"></i></div>
+            <h2 th:if="${isStudent}">Not Assigned to a Class</h2>
+            <h2 th:if="${isFaculty}">Faculty Profile Not Linked</h2>
+            <p th:if="${isStudent}">You haven't been assigned to a class group yet. Please contact your administrator to get assigned.</p>
+            <p th:if="${isFaculty}" th:text="${notAssignedMessage}">Your account is not linked to a faculty profile.</p>
+            <a th:href="@{/dashboard}" class="btn btn-primary" style="margin-top: 20px;">
+                <i class="ph ph-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Leave Actions Summary (Admin only) -->
+        <div th:if="${leaveActions}" sec:authorize="hasRole('ADMIN')" style="background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px;">
             <h3 style="margin-bottom: 12px;"><i class="ph ph-clipboard-text"></i> Faculty Leave — Rescheduling Summary</h3>
             <div th:each="action : ${leaveActions}" style="padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-secondary);">
                 <span th:text="${action}"></span>
             </div>
         </div>
 
-        <div style="margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+        <!-- ═══════ Generate Button (Admin only) ═══════ -->
+        <div th:if="${isAdmin}" style="margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap;">
             <a th:href="@{/timetable/generate}" class="btn btn-primary">
                 <i class="ph ph-lightning"></i> Generate New Timetable
             </a>
         </div>
 
-        <!-- ═══════ View Filter (Dynamic Dropdowns) ═══════ -->
-        <div class="filter-section">
+        <!-- ═══════ View Filter (Admin only) ═══════ -->
+        <div th:if="${isAdmin}" class="filter-section">
             <h3 style="margin-bottom: 15px;"><i class="ph ph-magnifying-glass"></i> View Timetable</h3>
             <form th:action="@{/timetable/view}" method="get" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
                 <div class="form-group" style="margin-bottom: 0;">
@@ -160,8 +241,8 @@
             </form>
         </div>
 
-        <!-- ═══════ Saved Timetables Directory ═══════ -->
-        <div th:if="${schedule == null or schedule.isEmpty()}">
+        <!-- ═══════ Saved Timetables Directory (Admin only) ═══════ -->
+        <div th:if="${isAdmin and (schedule == null or schedule.isEmpty())}">
             <div th:if="${availableTimetables != null and !availableTimetables.isEmpty()}">
                 <h2 style="margin: 28px 0 18px; font-size: 1.25rem;">
                     <i class="ph ph-folder-open" style="color: var(--accent);"></i> Saved Timetables
@@ -189,11 +270,21 @@
             </div>
         </div>
 
+        <!-- ═══════ Student/Faculty: No schedule message ═══════ -->
+        <div th:if="${(isStudent or isFaculty) and !notAssigned and (schedule == null or schedule.isEmpty())}" style="text-align: center; padding: 40px;">
+            <div style="font-size: 3rem; color: var(--text-muted); margin-bottom: 12px;"><i class="ph ph-calendar-blank"></i></div>
+            <p style="color: var(--text-secondary);">No timetable has been generated for your
+                <span th:if="${isStudent}">class group</span>
+                <span th:if="${isFaculty}">teaching schedule</span>
+                yet. Please check back later.
+            </p>
+        </div>
+
         <!-- ═══════ Timetable Grid (Light-Theme Pivot) ═══════ -->
         <div th:if="${schedule != null and !schedule.isEmpty()}" id="timetableGrid">
             <h2 th:if="${semester != null and section != null}" style="margin: 24px 0 16px;">
                 Timetable: <span th:text="${semester}"></span> — Section <span th:text="${section}"></span>
-                <span sec:authorize="hasRole('ADMIN')" style="font-size: 0.75rem; color: var(--text-muted); font-weight:400; margin-left: 12px;">
+                <span th:if="${isAdmin}" style="font-size: 0.75rem; color: var(--text-muted); font-weight:400; margin-left: 12px;">
                     <i class="ph ph-pencil-simple"></i> Click any cell to edit
                 </span>
             </h2>
@@ -216,8 +307,9 @@
                             <td th:each="day : ${ {'MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'} }"
                                 class="tt-cell">
                                 <th:block th:each="entry : ${schedule}" th:if="${entry.dayOfWeek == day and entry.timeSlot == timeSlot}">
-                                    <div class="tt-slot-card"
-                                         sec:authorize="hasRole('ADMIN')"
+                                    <!--/* Admin: Clickable cells */-->
+                                    <div th:if="${isAdmin}"
+                                         class="tt-slot-card"
                                          style="cursor:pointer;"
                                          th:data-id="${entry.id}"
                                          th:data-day="${entry.dayOfWeek}"
@@ -233,8 +325,8 @@
                                         <span class="tt-detail"><i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}"></span></span>
                                         <span class="tt-detail"><i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}"></span></span>
                                     </div>
-                                    <!--/* Non-admin view (no click) */-->
-                                    <div class="tt-slot-card" sec:authorize="!hasRole('ADMIN')">
+                                    <!--/* Faculty & Student: Read-only cells */-->
+                                    <div th:if="${!isAdmin}" class="tt-slot-card">
                                         <span class="tt-subject" th:text="${entry.subject.name}"></span>
                                         <span class="tt-detail"><i class="ph ph-chalkboard-teacher"></i> <span th:text="${entry.faculty.name}"></span></span>
                                         <span class="tt-detail"><i class="ph ph-buildings"></i> <span th:text="${entry.classroom.roomNumber}"></span></span>
@@ -248,7 +340,7 @@
         </div>
 
         <!-- ═══════ Faculty Leave Rescheduling (Admin only) ═══════ -->
-        <div sec:authorize="hasRole('ADMIN')" style="margin-top: 32px; background: var(--bg-card); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);">
+        <div th:if="${isAdmin}" style="margin-top: 32px; background: var(--bg-card); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);">
             <h3 style="margin-bottom: 16px;">
                 <i class="ph ph-user-minus" style="color: var(--accent);"></i> Dynamic Faculty Leave Rescheduling
             </h3>
@@ -298,9 +390,9 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!--  ADMIN EDIT MODAL                                                  -->
+    <!--  ADMIN EDIT MODAL (only rendered for admin)                        -->
     <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <div class="modal-overlay" id="editModal">
+    <div th:if="${isAdmin}" class="modal-overlay" id="editModal">
         <div class="modal-box">
             <div class="modal-header">
                 <h3><i class="ph ph-pencil-simple" style="color:#00BFA6;"></i> Edit Class Slot</h3>
@@ -371,7 +463,8 @@
         <p>&copy; 2024 AcadSched. All rights reserved.</p>
     </footer>
 
-    <script>
+    <!-- ═══════ Admin-only JavaScript ═══════ -->
+    <script th:if="${isAdmin}">
     /* ═══════ CSRF token (shared by all AJAX) ═══════ */
     var csrfInput = document.getElementById('csrfToken');
     var csrfName  = csrfInput ? csrfInput.name : '_csrf';
@@ -439,8 +532,8 @@
             if (data.saved) {
                 // Success — close modal and refresh page to show updated timetable
                 closeEditModal();
-                var sem = document.getElementById('semester').value;
-                var sec = document.getElementById('section').value;
+                var sem = document.getElementById('semester') ? document.getElementById('semester').value : '';
+                var sec = document.getElementById('section') ? document.getElementById('section').value : '';
                 if (sem && sec) {
                     window.location.href = '/timetable/view?semester='
                         + encodeURIComponent(sem) + '&section=' + encodeURIComponent(sec);
@@ -468,7 +561,7 @@
         });
     }
 
-    /* ═══════ Faculty Leave AJAX (unchanged logic) ═══════ */
+    /* ═══════ Faculty Leave AJAX ═══════ */
     document.addEventListener('DOMContentLoaded', function() {
         var form = document.getElementById('leaveForm');
         if (!form) return;

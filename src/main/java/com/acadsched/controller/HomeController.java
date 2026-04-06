@@ -26,10 +26,7 @@ public class HomeController {
     private final GrievanceRepository grievanceRepository;
     private final EventRepository eventRepository;
 
-    @GetMapping("/")
-    public String home() {
-        return "index";
-    }
+
 
     @GetMapping("/login")
     public String login() {
@@ -58,37 +55,7 @@ public class HomeController {
         }
     }
 
-    @GetMapping("/dashboard")
-    public String dashboard(Model model) {
-        // Add statistics for admin dashboard
-        model.addAttribute("facultyCount", facultyRepository.count());
-        model.addAttribute("subjectCount", subjectRepository.count());
-        model.addAttribute("classroomCount", classroomRepository.count());
-        model.addAttribute("timetableCount", timetableRepository.count());
-        model.addAttribute("availableFacultyCount", facultyRepository.findByAvailable(true).size());
-        model.addAttribute("availableClassroomCount", classroomRepository.findByAvailable(true).size());
-        model.addAttribute("pendingGrievanceCount", grievanceRepository.findByStatus(
-                com.acadsched.model.Grievance.GrievanceStatus.PENDING).size());
-        model.addAttribute("upcomingEventCount", eventRepository.findByEventDateAfter(LocalDateTime.now()).size());
-        
-        return "dashboard";
-    }
-    
-    @GetMapping("/admin-dashboard")
-    public String adminDashboard(Model model) {
-        // Add comprehensive statistics
-        model.addAttribute("facultyCount", facultyRepository.count());
-        model.addAttribute("subjectCount", subjectRepository.count());
-        model.addAttribute("classroomCount", classroomRepository.count());
-        model.addAttribute("timetableCount", timetableRepository.count());
-        model.addAttribute("availableFacultyCount", facultyRepository.findByAvailable(true).size());
-        model.addAttribute("availableClassroomCount", classroomRepository.findByAvailable(true).size());
-        model.addAttribute("pendingGrievanceCount", grievanceRepository.findByStatus(
-                com.acadsched.model.Grievance.GrievanceStatus.PENDING).size());
-        model.addAttribute("upcomingEventCount", eventRepository.findByEventDateAfter(LocalDateTime.now()).size());
-        
-        return "admin-dashboard";
-    }
+
 
     @GetMapping("/access-denied")
     public String accessDenied() {

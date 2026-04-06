@@ -14,4 +14,5 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
     List<Faculty> findByAvailable(Boolean available);
     boolean existsByFacultyId(String facultyId);
     boolean existsByEmail(String email);
+    Optional<Faculty> findByEmail(String email);
 }

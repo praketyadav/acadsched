@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -14,6 +15,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(exclude = {"eligibleSubjects", "availableTimeSlots"})
 public class Faculty {
 
     @Id
@@ -44,6 +46,8 @@ public class Faculty {
     @Column(name = "time_slot")
     private Set<String> availableTimeSlots = new HashSet<>();
 
-    @OneToMany(mappedBy = "faculty", cascade = CascadeType.ALL)
-    private Set<Subject> subjects = new HashSet<>();
+    /** Subjects this faculty is eligible to teach (inverse side). */
+    @ManyToMany(mappedBy = "eligibleFaculty")
+    private Set<Subject> eligibleSubjects = new HashSet<>();
 }
+

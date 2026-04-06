@@ -45,7 +45,7 @@ public class SubjectService {
         subject.setCredits(updatedSubject.getCredits());
         subject.setDepartment(updatedSubject.getDepartment());
         subject.setSemester(updatedSubject.getSemester());
-        subject.setFaculty(updatedSubject.getFaculty());
+        subject.setEligibleFaculty(updatedSubject.getEligibleFaculty());
         subject.setPriority(updatedSubject.getPriority());
         subject.setType(updatedSubject.getType());
         

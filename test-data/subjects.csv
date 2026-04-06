@@ -1,0 +1,20 @@
+name,subjectCode,credits,department,semester,type,facultyId
+Data Structures & Algorithms,CS201,4,Computer Science,Sem 3,THEORY,FAC001|FAC003
+Operating Systems,CS202,4,Computer Science,Sem 3,THEORY,FAC003|FAC006
+Database Management Systems,CS203,3,Computer Science,Sem 3,THEORY,FAC006|FAC009
+Computer Networks,CS204,3,Computer Science,Sem 4,THEORY,FAC009|FAC001
+Software Engineering,CS205,3,Computer Science,Sem 4,THEORY,FAC011
+Machine Learning,CS301,4,Computer Science,Sem 5,THEORY,FAC014|FAC015
+Artificial Intelligence,CS302,3,Computer Science,Sem 5,THEORY,FAC015|FAC014
+Classical Mechanics,PH201,4,Physics,Sem 3,THEORY,FAC002|FAC007
+Quantum Physics,PH301,3,Physics,Sem 5,THEORY,FAC007|FAC002
+Electrodynamics,PH302,3,Physics,Sem 5,THEORY,FAC013
+Circuit Analysis,EE201,4,Electrical,Sem 3,THEORY,FAC005|FAC010
+Power Systems,EE301,3,Electrical,Sem 5,THEORY,FAC010|FAC005
+Linear Algebra,MA201,3,Mathematics,Sem 3,THEORY,FAC008
+Programming Lab,CS201L,2,Computer Science,Sem 3,PRACTICAL,FAC001|FAC003|FAC006
+DBMS Lab,CS203L,2,Computer Science,Sem 3,PRACTICAL,FAC006|FAC009
+Networks Lab,CS204L,2,Computer Science,Sem 4,PRACTICAL,FAC009|FAC001
+ML Lab,CS301L,2,Computer Science,Sem 5,PRACTICAL,FAC014|FAC015
+Physics Lab,PH201L,2,Physics,Sem 3,PRACTICAL,FAC002|FAC007
+Circuits Lab,EE201L,2,Electrical,Sem 3,PRACTICAL,FAC005|FAC010

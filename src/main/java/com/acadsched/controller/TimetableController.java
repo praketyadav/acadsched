@@ -1,39 +1,184 @@
 package com.acadsched.controller;
 
-import com.acadsched.model.Classroom;
+import com.acadsched.model.ClassGroup;
 import com.acadsched.model.Faculty;
 import com.acadsched.model.Timetable;
-import com.acadsched.service.ClassroomService;
-import com.acadsched.service.FacultyService;
-import com.acadsched.service.SchedulingService;
+import com.acadsched.model.User;
+import com.acadsched.security.RoleConstants;
+import com.acadsched.service.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/timetable")
 @RequiredArgsConstructor
+@Slf4j
 public class TimetableController {
 
     private final SchedulingService schedulingService;
+    private final TimetableService timetableService;
     private final FacultyService facultyService;
     private final ClassroomService classroomService;
+    private final UserService userService;
+    private final com.acadsched.repository.ClassGroupRepository classGroupRepository;
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  VIEW TIMETABLE — Role-Aware Landing Page
+    // ═══════════════════════════════════════════════════════════════════
 
     @GetMapping
-    public String viewTimetable(Model model) {
+    public String viewTimetable(Model model, Authentication authentication) {
+        String username = authentication.getName();
+        String role = extractRole(authentication);
+
+        switch (role) {
+            case RoleConstants.STUDENT -> {
+                return handleStudentView(model, username);
+            }
+            case RoleConstants.FACULTY -> {
+                return handleFacultyView(model, username);
+            }
+            default -> {
+                // ADMIN — full management view
+                model.addAttribute("isStudent", false);
+                model.addAttribute("isFaculty", false);
+                model.addAttribute("isAdmin", true);
+                model.addAttribute("faculties", facultyService.getAllFaculty());
+                model.addAttribute("classrooms", classroomService.getAllClassrooms());
+                model.addAttribute("availableTimetables", schedulingService.getAvailableTimetables());
+                return "timetable/view";
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  VIEW BY SEMESTER/SECTION — With Student Guard
+    // ═══════════════════════════════════════════════════════════════════
+
+    @GetMapping("/view")
+    public String viewBySemesterSection(@RequestParam String semester,
+                                        @RequestParam String section,
+                                        Model model,
+                                        Authentication authentication) {
+        String username = authentication.getName();
+        String role = extractRole(authentication);
+
+        // ── STUDENT GUARD: Cannot browse other sections ─────────────
+        if (RoleConstants.STUDENT.equals(role)) {
+            return handleStudentView(model, username);
+        }
+
+        // ── FACULTY GUARD: Redirect to their schedule ───────────────
+        if (RoleConstants.FACULTY.equals(role)) {
+            return handleFacultyView(model, username);
+        }
+
+        // ── ADMIN: Standard semester/section view ───────────────────
+        List<Timetable> schedule = schedulingService.getTimetableBySemesterAndSection(semester, section);
+        model.addAttribute("schedule", schedule);
+        model.addAttribute("semester", semester);
+        model.addAttribute("section", section);
         model.addAttribute("faculties", facultyService.getAllFaculty());
         model.addAttribute("classrooms", classroomService.getAllClassrooms());
         model.addAttribute("availableTimetables", schedulingService.getAvailableTimetables());
+        model.addAttribute("isStudent", false);
+        model.addAttribute("isFaculty", false);
+        model.addAttribute("isAdmin", true);
         return "timetable/view";
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  STUDENT VIEW HELPER
+    // ═══════════════════════════════════════════════════════════════════
+
+    private String handleStudentView(Model model, String username) {
+        model.addAttribute("isStudent", true);
+        model.addAttribute("isFaculty", false);
+        model.addAttribute("isAdmin", false);
+
+        Optional<ClassGroup> classGroupOpt = timetableService.findClassGroupForStudent(username);
+
+        if (classGroupOpt.isEmpty()) {
+            // Student not assigned to any class group
+            model.addAttribute("notAssigned", true);
+            log.warn("Student '{}' attempted timetable view but has no ClassGroup", username);
+            return "timetable/view";
+        }
+
+        ClassGroup classGroup = classGroupOpt.get();
+        List<Timetable> schedule = timetableService.getStudentTimetableByUsername(username);
+
+        model.addAttribute("notAssigned", false);
+        model.addAttribute("schedule", schedule);
+        model.addAttribute("studentClassGroup", classGroup);
+        model.addAttribute("semester", schedule.isEmpty() ? null : schedule.get(0).getSemester());
+        model.addAttribute("section", classGroup.getSection());
+
+        log.info("Student '{}' viewing timetable for ClassGroup '{}' ({} entries)",
+                username, classGroup.getName(), schedule.size());
+        return "timetable/view";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  FACULTY VIEW HELPER
+    // ═══════════════════════════════════════════════════════════════════
+
+    private String handleFacultyView(Model model, String username) {
+        model.addAttribute("isStudent", false);
+        model.addAttribute("isFaculty", true);
+        model.addAttribute("isAdmin", false);
+
+        // Look up the Faculty entity linked to this user
+        Optional<User> userOpt = userService.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            model.addAttribute("error", "User account not found.");
+            return "timetable/view";
+        }
+
+        User user = userOpt.get();
+        Faculty faculty = user.getFaculty();
+
+        if (faculty == null) {
+            // Faculty user not linked to a Faculty entity
+            model.addAttribute("notAssigned", true);
+            model.addAttribute("notAssignedMessage",
+                    "Your account is not linked to a faculty profile. Please contact your administrator.");
+            log.warn("Faculty user '{}' has no linked Faculty entity", username);
+            return "timetable/view";
+        }
+
+        List<Timetable> schedule = schedulingService.getFacultyTimetable(faculty.getId());
+
+        model.addAttribute("notAssigned", false);
+        model.addAttribute("schedule", schedule);
+        model.addAttribute("facultyProfile", faculty);
+        model.addAttribute("semester", schedule.isEmpty() ? null : schedule.get(0).getSemester());
+        model.addAttribute("section", schedule.isEmpty() ? null : schedule.get(0).getClassGroup().getSection());
+
+        log.info("Faculty '{}' viewing their timetable ({} entries)",
+                faculty.getName(), schedule.size());
+        return "timetable/view";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  ADMIN ONLY — Generate Timetable
+    // ═══════════════════════════════════════════════════════════════════
+
     @GetMapping("/generate")
     public String showGenerateForm(Model model) {
+        model.addAttribute("classGroups", classGroupRepository.findAll());
         return "timetable/generate";
     }
 
@@ -54,6 +199,9 @@ public class TimetableController {
                     + schedule.stream().map(Timetable::getDayOfWeek).distinct().count() + " days.");
             model.addAttribute("faculties", facultyService.getAllFaculty());
             model.addAttribute("classrooms", classroomService.getAllClassrooms());
+            model.addAttribute("isStudent", false);
+            model.addAttribute("isFaculty", false);
+            model.addAttribute("isAdmin", true);
             return "timetable/view";
         } catch (Exception e) {
             model.addAttribute("error", "Error generating timetable: " + e.getMessage());
@@ -61,18 +209,9 @@ public class TimetableController {
         }
     }
 
-    @GetMapping("/view")
-    public String viewBySemesterSection(@RequestParam String semester,
-                                        @RequestParam String section,
-                                        Model model) {
-        List<Timetable> schedule = schedulingService.getTimetableBySemesterAndSection(semester, section);
-        model.addAttribute("schedule", schedule);
-        model.addAttribute("semester", semester);
-        model.addAttribute("section", section);
-        model.addAttribute("faculties", facultyService.getAllFaculty());
-        model.addAttribute("classrooms", classroomService.getAllClassrooms());
-        return "timetable/view";
-    }
+    // ═══════════════════════════════════════════════════════════════════
+    //  ADMIN ONLY — Reschedule / Faculty Leave / Admin Override
+    // ═══════════════════════════════════════════════════════════════════
 
     @GetMapping("/faculty/{facultyId}")
     public String viewFacultyTimetable(@PathVariable Long facultyId, Model model) {
@@ -185,5 +324,20 @@ public class TimetableController {
                 })
                 .toList();
     }
-}
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  UTILITY
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Extract the bare role name (ADMIN/FACULTY/STUDENT) from the Authentication.
+     */
+    private String extractRole(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(a -> a.startsWith("ROLE_"))
+                .map(a -> a.substring(5))  // strip "ROLE_"
+                .findFirst()
+                .orElse("");
+    }
+}

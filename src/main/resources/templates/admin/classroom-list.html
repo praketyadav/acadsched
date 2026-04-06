@@ -15,6 +15,7 @@
                 <li><a th:href="@{/admin/faculty}">Faculty</a></li>
                 <li><a th:href="@{/admin/subjects}">Subjects</a></li>
                 <li><a th:href="@{/admin/classrooms}" class="active">Classrooms</a></li>
+                <li><a th:href="@{/timetable}">Timetable</a></li>
                 <li>
                     <form th:action="@{/logout}" method="post" style="display: inline;">
                         <button type="submit" class="btn-logout">Logout</button>
@@ -31,9 +32,21 @@
         <div th:if="${param.updated}" class="alert alert-success">Classroom updated successfully!</div>
         <div th:if="${param.deleted}" class="alert alert-success">Classroom deleted successfully!</div>
 
-        <div style="margin: 20px 0;">
+        <div style="margin: 20px 0; display: flex; gap: 12px; align-items: center;">
             <a th:href="@{/admin/classrooms/new}" class="btn btn-primary"><i class="ph ph-plus"></i> Add New Classroom</a>
         </div>
+
+        <!-- CSV Drag-and-Drop Upload Zone -->
+        <div class="dropzone" id="classroomDropzone">
+            <div class="dropzone-icon"><i class="ph ph-upload-simple"></i></div>
+            <div class="dropzone-text">Drag &amp; drop a <strong>.csv</strong> file here, or <strong>click to browse</strong></div>
+            <div class="dropzone-hint">Columns: roomNumber, building, capacity, type, equipment</div>
+            <input type="file" id="classroomFileInput" accept=".csv" style="display:none">
+        </div>
+        <div class="dropzone-loading" id="classroomLoading">
+            <i class="ph ph-spinner ph-spin"></i> Importing classroom data...
+        </div>
+        <div class="toast-container" id="toastContainer"></div>
 
         <div th:if="${classrooms != null and !classrooms.isEmpty()}">
             <table>
@@ -61,6 +74,11 @@
                         </td>
                         <td>
                             <a th:href="@{/admin/classrooms/{id}/edit(id=${classroom.id})}" class="btn btn-primary btn-sm">Edit</a>
+                            <form th:action="@{/admin/classrooms/{id}/toggle(id=${classroom.id})}" method="post" style="display: inline;">
+                                <button type="submit" class="btn btn-secondary btn-sm">
+                                    <span th:text="${classroom.available} ? 'Mark Unavailable' : 'Mark Available'"></span>
+                                </button>
+                            </form>
                             <form th:action="@{/admin/classrooms/{id}/delete(id=${classroom.id})}" method="post" style="display: inline;" onsubmit="return confirm('Delete this classroom?');">
                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                             </form>
@@ -78,5 +96,55 @@
     <footer class="footer">
         <p>&copy; 2024 AcadSched. All rights reserved.</p>
     </footer>
+
+<script>
+(function() {
+    const dz = document.getElementById('classroomDropzone');
+    const fi = document.getElementById('classroomFileInput');
+    const loading = document.getElementById('classroomLoading');
+    const tc = document.getElementById('toastContainer');
+    if (!dz) return;
+
+    dz.addEventListener('click', () => fi.click());
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); uploadFile(e.dataTransfer.files[0]); });
+    fi.addEventListener('change', () => { if (fi.files[0]) uploadFile(fi.files[0]); });
+
+    function uploadFile(file) {
+        if (!file) return;
+        dz.style.display = 'none';
+        loading.classList.add('active');
+        const fd = new FormData();
+        fd.append('file', file);
+        fetch('/admin/classrooms/import', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                loading.classList.remove('active');
+                dz.style.display = '';
+                if (data.success) {
+                    showToast('Imported ' + data.count + ' classroom records!', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.errors ? data.errors.join('; ') : 'Import failed', 'error');
+                }
+            })
+            .catch(() => {
+                loading.classList.remove('active');
+                dz.style.display = '';
+                showToast('Network error during import', 'error');
+            });
+    }
+
+    function showToast(msg, type) {
+        const t = document.createElement('div');
+        t.className = 'toast toast-' + type;
+        t.textContent = msg;
+        tc.appendChild(t);
+        setTimeout(() => t.remove(), 5000);
+    }
+})();
+</script>
 </body>
 </html>
+

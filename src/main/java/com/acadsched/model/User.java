@@ -35,6 +35,10 @@ public class User {
     @JoinColumn(name = "class_group_id")
     private ClassGroup classGroup;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "faculty_id")
+    private Faculty faculty;
+
     @Column(nullable = false)
     private Boolean enabled = true;
 

@@ -183,8 +183,10 @@ public class CsvImportService {
     }
 
     /**
-     * Import subjects from CSV.
-     * Columns: subjectCode, name, credits, department, semester, facultyId, priority, type
+     * Import subjects from CSV (header-based mapping).
+     * Required columns: name, subjectCode, credits, department, semester
+     * Optional columns: type (THEORY/PRACTICAL), facultyId, priority
+     * Columns can be in any order — the header row determines mapping.
      */
     @Transactional
     public Map<String, Object> importSubjects(MultipartFile file) {
@@ -202,47 +204,68 @@ public class CsvImportService {
                 return result;
             }
 
+            // Build column index map from header (case-insensitive, trimmed)
+            Map<String, Integer> colMap = new LinkedHashMap<>();
+            for (int i = 0; i < header.length; i++) {
+                colMap.put(header[i].trim().toLowerCase(), i);
+            }
+
+            // Validate required columns exist
+            String[] requiredCols = {"name", "subjectcode", "credits", "department", "semester"};
+            for (String col : requiredCols) {
+                if (!colMap.containsKey(col)) {
+                    result.put("success", false);
+                    result.put("errors", List.of("Missing required column: '" + col + "'. Required: name, subjectCode, credits, department, semester"));
+                    return result;
+                }
+            }
+
             String[] row;
             int rowNum = 1;
             while ((row = reader.readNext()) != null) {
                 rowNum++;
-                if (row.length < 5) {
-                    errors.add("Row " + rowNum + ": Missing required columns (need at least subjectCode, name, credits, department, semester)");
-                    break;
-                }
 
-                String code = row[0].trim();
-                String name = row[1].trim();
-                String creditsStr = row[2].trim();
-                String department = row[3].trim();
-                String semester = row[4].trim();
-                String facultyIdStr = row.length > 5 ? row[5].trim() : "";
-                String priorityStr = row.length > 6 ? row[6].trim() : "1";
-                String typeStr = row.length > 7 ? row[7].trim().toUpperCase() : "";
+                String name = getCol(row, colMap, "name");
+                String code = getCol(row, colMap, "subjectcode");
+                String creditsStr = getCol(row, colMap, "credits");
+                String department = getCol(row, colMap, "department");
+                String semester = getCol(row, colMap, "semester");
+                String typeStr = getCol(row, colMap, "type").toUpperCase();
+                String facultyIdStr = getCol(row, colMap, "facultyid");
+                String priorityStr = getCol(row, colMap, "priority");
 
-                if (code.isEmpty() || name.isEmpty() || creditsStr.isEmpty()
+                // Validate required fields
+                if (name.isEmpty() || code.isEmpty() || creditsStr.isEmpty()
                         || department.isEmpty() || semester.isEmpty()) {
-                    errors.add("Row " + rowNum + ": Required fields cannot be empty");
+                    errors.add("Row " + rowNum + ": Required fields (name, subjectCode, credits, department, semester) cannot be empty");
                     break;
                 }
 
+                // Check for duplicate subject code
                 if (subjectRepository.existsBySubjectCode(code)) {
-                    errors.add("Row " + rowNum + ": Subject code '" + code + "' already exists");
+                    errors.add("Row " + rowNum + ": Subject code '" + code + "' already exists in the database");
                     break;
                 }
 
+                // Parse credits
                 int credits;
                 try {
                     credits = Integer.parseInt(creditsStr);
                 } catch (NumberFormatException e) {
-                    errors.add("Row " + rowNum + ": Invalid credits '" + creditsStr + "'");
+                    errors.add("Row " + rowNum + ": Invalid credit value '" + creditsStr + "' for subject '" + code + "'");
                     break;
                 }
 
+                // Parse priority (optional, defaults to 1)
                 int priority = 1;
-                try {
-                    if (!priorityStr.isEmpty()) priority = Integer.parseInt(priorityStr);
-                } catch (NumberFormatException ignored) {}
+                if (!priorityStr.isEmpty()) {
+                    try {
+                        priority = Integer.parseInt(priorityStr);
+                    } catch (NumberFormatException e) {
+                        errors.add("Row " + rowNum + ": Invalid priority value '" + priorityStr + "' for subject '" + code + "'");
+                        break;
+                    }
+                }
 
                 Subject s = new Subject();
                 s.setSubjectCode(code);
@@ -252,23 +275,33 @@ public class CsvImportService {
                 s.setSemester(semester);
                 s.setPriority(priority);
 
+                // Parse type (optional, defaults to THEORY)
                 if (!typeStr.isEmpty()) {
                     try {
                         s.setType(Subject.SubjectType.valueOf(typeStr));
                     } catch (IllegalArgumentException e) {
-                        s.setType(Subject.SubjectType.THEORY);
-                    }
-                }
-
-                // Link faculty if provided
-                if (!facultyIdStr.isEmpty()) {
-                    Optional<Faculty> fac = facultyRepository.findByFacultyId(facultyIdStr);
-                    if (fac.isPresent()) {
-                        s.setFaculty(fac.get());
-                    } else {
-                        errors.add("Row " + rowNum + ": Faculty ID '" + facultyIdStr + "' not found");
+                        errors.add("Row " + rowNum + ": Invalid subject type '" + typeStr + "' for subject '" + code + "'. Must be THEORY or PRACTICAL");
                         break;
                     }
+                } else {
+                    s.setType(Subject.SubjectType.THEORY);
+                }
+
+                // Link eligible faculty pool (pipe-separated: FAC001|FAC003|FAC006)
+                if (!facultyIdStr.isEmpty()) {
+                    String[] facultyIds = facultyIdStr.split("\\|");
+                    for (String fid : facultyIds) {
+                        String trimmedFid = fid.trim();
+                        if (trimmedFid.isEmpty()) continue;
+                        Optional<Faculty> fac = facultyRepository.findByFacultyId(trimmedFid);
+                        if (fac.isPresent()) {
+                            s.getEligibleFaculty().add(fac.get());
+                        } else {
+                            errors.add("Row " + rowNum + ": Faculty ID '" + trimmedFid + "' not found for subject '" + code + "'");
+                            break;
+                        }
+                    }
+                    if (!errors.isEmpty()) break;
                 }
 
                 toSave.add(s);
@@ -287,5 +320,14 @@ public class CsvImportService {
         result.put("success", true);
         result.put("count", toSave.size());
         return result;
+    }
+
+    /**
+     * Safely get a column value by header name. Returns "" if the column doesn't exist.
+     */
+    private String getCol(String[] row, Map<String, Integer> colMap, String colName) {
+        Integer idx = colMap.get(colName);
+        if (idx == null || idx >= row.length) return "";
+        return row[idx].trim();
     }
 }

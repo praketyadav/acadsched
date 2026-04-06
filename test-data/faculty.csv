@@ -1,0 +1,16 @@
+name,facultyId,department,email,phoneNumber
+Dr. Aris Totle,FAC001,Computer Science,aris.t@university.edu,9876543210
+Prof. Marie Curie,FAC002,Physics,m.curie@university.edu,9876543211
+Dr. Alan Turing,FAC003,Computer Science,turing.a@university.edu,9876543212
+Prof. Ada Lovelace,FAC004,Computer Science,ada.l@university.edu,9876543213
+Dr. Nikola Tesla,FAC005,Electrical,tesla.n@university.edu,9876543214
+Dr. Grace Hopper,FAC006,Computer Science,hopper.g@university.edu,9876543215
+Prof. Richard Feynman,FAC007,Physics,feynman.r@university.edu,9876543216
+Dr. Katherine Johnson,FAC008,Mathematics,johnson.k@university.edu,9876543217
+Dr. Linus Torvalds,FAC009,Computer Science,linus.t@university.edu,9876543218
+Prof. Hedy Lamarr,FAC010,Electrical,hedy.l@university.edu,9876543219
+Dr. James Gosling,FAC011,Computer Science,gosling.j@university.edu,9876543220
+Dr. Barbara Liskov,FAC012,Computer Science,liskov.b@university.edu,9876543221
+Prof. Stephen Hawking,FAC013,Physics,hawking.s@university.edu,9876543222
+Dr. Andrew Ng,FAC014,Computer Science,andrew.ng@university.edu,9876543223
+Dr. Fei-Fei Li,FAC015,Computer Science,feifei.li@university.edu,9876543224

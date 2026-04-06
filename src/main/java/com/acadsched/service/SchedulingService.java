@@ -1,5 +1,6 @@
 package com.acadsched.service;
 
+import com.acadsched.dto.SessionDTO;
 import com.acadsched.model.*;
 import com.acadsched.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -11,23 +12,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Core Scheduling Service — CSP-based timetable generation.
+ * Core Scheduling Service — CSP-based timetable generation with Faculty Pool.
  *
- * Bug fix:  Replaced single flat "occupied" set with per-faculty, per-room,
- *           and per-class-group conflict tracking.  Sessions are now distributed
- *           across the week using round-robin day selection instead of greedy
- *           sequential fill from Monday.
+ * Faculty Pool Model:
+ *   Each subject has a pool of eligible faculty. During generation, the engine
+ *   dynamically selects the best faculty for each session using:
+ *   1. Availability Check: is the faculty free at this day/slot?
+ *   2. Load Balancing: among free faculty, pick the one with the lowest workload.
  *
- * Feature 1 — Student Gap Hours:
- *   The generator accepts a mandatory studentGapHours parameter.  During slot
- *   selection, consecutive-class limits are enforced so that each day contains
- *   at least N free slots for every class group.
- *
- * Feature 2 — Dynamic Faculty Leave Rescheduling:
- *   handleFacultyLeave() allows marking a faculty member as absent for a
- *   specific day/slot *after* the timetable is generated.  Only the affected
- *   entries are rescheduled (substitute faculty or alternate slot); the rest
- *   of the timetable is untouched.
+ * Faculty Leave:
+ *   handleFacultyLeave() first tries to substitute with another pool member
+ *   at the same slot, then falls back to moving the session to a different day.
  */
 @Service
 @RequiredArgsConstructor
@@ -40,6 +35,7 @@ public class SchedulingService {
     private final ClassroomRepository classroomRepository;
     private final UserRepository userRepository;
     private final ClassGroupRepository classGroupRepository;
+    private final SubjectAllocationService subjectAllocationService;
 
     private static final String[] DAYS = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"};
     private static final String[] TIME_SLOTS = {
@@ -48,7 +44,7 @@ public class SchedulingService {
     };
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  1. TIMETABLE GENERATION  (bug-fixed + studentGapHours constraint)
+    //  1. TIMETABLE GENERATION (Faculty Pool + Load Balancing)
     // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional
@@ -62,146 +58,273 @@ public class SchedulingService {
     }
 
     @Transactional
-    public List<Timetable> generateTimetable(String semester, String section, int studentGapHours, boolean enforceLunchBreak) {
+    public List<Timetable> generateTimetable(String semester, String section,
+                                              int studentGapHours, boolean enforceLunchBreak) {
         log.info("Generating timetable for semester: {} section: {} gapHours: {} lunchBreak: {}",
                  semester, section, studentGapHours, enforceLunchBreak);
 
-        // Clamp gap hours to a sane range (0–3)
         studentGapHours = Math.max(0, Math.min(studentGapHours, 3));
-
-        // Maximum classes allowed per day = total slots minus gap requirement
         int maxClassesPerDay = TIME_SLOTS.length - studentGapHours;
-
-        // ── Resolve / create ClassGroup ──────────────────────────────────
-        ClassGroup classGroup = classGroupRepository.findByName(section)
-                .orElseGet(() -> {
-                    ClassGroup g = new ClassGroup();
-                    g.setName(section);
-                    g.setDepartment("General");
-                    g.setYear("Default");
-                    g.setSection(section);
-                    g.setStudentStrength(30);
-                    g.setActive(true);
-                    return classGroupRepository.save(g);
-                });
 
         // ── Clear any previous schedule for this semester ────────────────
         List<Timetable> existing = timetableRepository.findBySemester(semester);
         timetableRepository.deleteAll(existing);
 
-        // ── Load resources ──────────────────────────────────────────────
-        List<Subject> subjects = subjectRepository.findBySemester(semester);
-        if (subjects.isEmpty()) {
-            log.warn("No subjects found for semester {}", semester);
+        // ── 1. ALLOCATE SESSIONS via SubjectAllocationService ───────────
+        List<SessionDTO> sessions = subjectAllocationService
+                .generateUnassignedSessions(semester, section);
+        if (sessions.isEmpty()) {
+            log.warn("No sessions allocated for semester={} section={}", semester, section);
             return new ArrayList<>();
         }
 
-        // Sort by priority (desc), then credits (desc)
-        subjects.sort((s1, s2) -> {
-            int cmp = Integer.compare(s2.getPriority(), s1.getPriority());
-            return cmp != 0 ? cmp : Integer.compare(s2.getCredits(), s1.getCredits());
-        });
+        ClassGroup classGroup = sessions.get(0).getClassGroup();
 
+        // ── Load classrooms ─────────────────────────────────────────────
         List<Classroom> availableRooms = classroomRepository.findByAvailable(true);
         if (availableRooms.isEmpty()) {
             log.warn("No available classrooms");
             return new ArrayList<>();
         }
 
-        // ── Conflict-tracking sets ──────────────────────────────────────
-        // Each key is  "resource:id-DAY-TIME"  e.g. "faculty:3-MONDAY-09:00-10:00"
-        Set<String> facultyOccupied  = new HashSet<>();
-        Set<String> roomOccupied     = new HashSet<>();
-        Set<String> groupOccupied    = new HashSet<>();
+        // ── Pre-load all faculty for pool lookups ────────────────────────
+        Map<Long, Faculty> facultyMap = facultyRepository.findAll().stream()
+                .collect(Collectors.toMap(Faculty::getId, f -> f));
 
-        // Track how many classes are assigned per day for the class group
-        // (used to enforce studentGapHours)
+        // ── Conflict-tracking sets ──────────────────────────────────────
+        Set<String> facultyOccupied = new HashSet<>();
+        Set<String> roomOccupied    = new HashSet<>();
+        Set<String> groupOccupied   = new HashSet<>();
+
         Map<String, Integer> classesPerDay = new HashMap<>();
-        for (String day : DAYS) {
-            classesPerDay.put(day, 0);
-        }
+        for (String day : DAYS) classesPerDay.put(day, 0);
+
+        // ── Faculty workload tracker (for load balancing) ───────────────
+        Map<Long, Integer> facultyWorkload = new HashMap<>();
 
         List<Timetable> schedule = new ArrayList<>();
 
-        // ── Assign sessions for each subject ────────────────────────────
-        for (Subject subject : subjects) {
-            if (subject.getFaculty() == null) continue;
+        // Build available time-slots list
+        List<String> availableTimeSlots = new ArrayList<>();
+        for (String time : TIME_SLOTS) {
+            if (enforceLunchBreak && "12:00-13:00".equals(time)) continue;
+            availableTimeSlots.add(time);
+        }
 
-            Faculty faculty = subject.getFaculty();
-            int sessionsNeeded = subject.getCredits();
+        // ── 2a. SCHEDULE LINKED LAB BLOCKS ──────────────────────────────
+        Map<String, List<SessionDTO>> labBlocks = sessions.stream()
+                .filter(SessionDTO::isLinked)
+                .collect(Collectors.groupingBy(SessionDTO::getLinkedGroupId,
+                         LinkedHashMap::new, Collectors.toList()));
 
-            // Pick the best classroom for this subject (match type if possible)
-            Classroom room = pickClassroom(subject, availableRooms);
+        for (var entry : labBlocks.entrySet()) {
+            List<SessionDTO> block = entry.getValue();
+            block.sort(Comparator.comparingInt(SessionDTO::getBlockIndex));
+            int blockLen = block.size();
+            List<Long> eligibleIds = block.get(0).getEligibleFacultyIds();
 
-            // Build a round-robin ordered list of (day, time) pairs so that
-            // sessions spread evenly across the week instead of piling up
-            // on Monday/Tuesday.
-            List<String[]> slotOrder = buildRoundRobinSlots(enforceLunchBreak);
+            boolean placed = false;
+            for (String day : DAYS) {
+                if (classesPerDay.get(day) + blockLen > maxClassesPerDay) continue;
 
+                for (int start = 0; start <= availableTimeSlots.size() - blockLen; start++) {
+                    // Try to find a faculty free for ALL slots in the block
+                    Long selectedFacultyId = selectFacultyForBlock(
+                            eligibleIds, day, availableTimeSlots, start, blockLen,
+                            facultyOccupied, facultyWorkload);
+                    if (selectedFacultyId == null) continue;
+
+                    Faculty selectedFaculty = facultyMap.get(selectedFacultyId);
+                    if (selectedFaculty == null) continue;
+
+                    // Check group availability for all slots
+                    boolean groupFree = true;
+                    for (int j = 0; j < blockLen; j++) {
+                        String time = availableTimeSlots.get(start + j);
+                        String gKey = "group:" + classGroup.getId() + "-" + day + "-" + time;
+                        if (groupOccupied.contains(gKey)) { groupFree = false; break; }
+                    }
+                    if (!groupFree) continue;
+
+                    // Find a lab room
+                    Classroom labRoom = findLabRoom(availableRooms, day,
+                            availableTimeSlots.get(start), roomOccupied);
+                    if (labRoom == null) continue;
+
+                    // Check room availability for all block slots
+                    boolean roomFree = true;
+                    for (int j = 1; j < blockLen; j++) {
+                        String time = availableTimeSlots.get(start + j);
+                        String rKey = "room:" + labRoom.getId() + "-" + day + "-" + time;
+                        if (roomOccupied.contains(rKey)) { roomFree = false; break; }
+                    }
+                    if (!roomFree) continue;
+
+                    // ── Place the entire block ──────────────────────────
+                    for (int j = 0; j < blockLen; j++) {
+                        SessionDTO s = block.get(j);
+                        String time = availableTimeSlots.get(start + j);
+
+                        s.setAssignedFacultyId(selectedFacultyId);
+
+                        Timetable t = new Timetable();
+                        t.setSubject(s.getSubject());
+                        t.setFaculty(selectedFaculty);
+                        t.setClassroom(labRoom);
+                        t.setClassGroup(classGroup);
+                        t.setDayOfWeek(day);
+                        t.setTimeSlot(time);
+                        t.setSemester(semester);
+                        schedule.add(t);
+
+                        facultyOccupied.add("faculty:" + selectedFacultyId + "-" + day + "-" + time);
+                        roomOccupied.add("room:" + labRoom.getId() + "-" + day + "-" + time);
+                        groupOccupied.add("group:" + classGroup.getId() + "-" + day + "-" + time);
+                        classesPerDay.merge(day, 1, Integer::sum);
+                        facultyWorkload.merge(selectedFacultyId, 1, Integer::sum);
+                    }
+                    placed = true;
+                    break;
+                }
+                if (placed) break;
+            }
+            if (!placed) {
+                log.warn("Could not place {}-hour lab block for {}",
+                        blockLen, block.get(0).getSubject().getSubjectCode());
+            }
+        }
+
+        // ── 2b. SCHEDULE INDEPENDENT SESSIONS (round-robin + pool) ──────
+        List<SessionDTO> independent = sessions.stream()
+                .filter(s -> !s.isLinked())
+                .toList();
+
+        List<String[]> slotOrder = buildRoundRobinSlots(enforceLunchBreak);
+
+        Map<Long, List<SessionDTO>> bySubject = independent.stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getSubject().getId(),
+                        LinkedHashMap::new, Collectors.toList()));
+
+        for (var subjectSessions : bySubject.values()) {
+            Classroom room = pickClassroom(subjectSessions.get(0).getSubject(), availableRooms);
             int assigned = 0;
+
             for (String[] slot : slotOrder) {
-                if (assigned >= sessionsNeeded) break;
+                if (assigned >= subjectSessions.size()) break;
 
                 String day  = slot[0];
                 String time = slot[1];
 
-                // ── Gap constraint: skip this day if already at max classes ──
                 if (classesPerDay.get(day) >= maxClassesPerDay) continue;
 
-                // ── Conflict checks ─────────────────────────────────────
-                String fKey = "faculty:" + faculty.getId() + "-" + day + "-" + time;
-                String rKey = "room:" + room.getId() + "-" + day + "-" + time;
-                String gKey = "group:" + classGroup.getId() + "-" + day + "-" + time;
+                SessionDTO s = subjectSessions.get(assigned);
 
-                if (facultyOccupied.contains(fKey)) continue;  // faculty busy
+                // ── Dynamic faculty selection ───────────────────────────
+                Long selectedFacultyId = selectFaculty(
+                        s.getEligibleFacultyIds(), day, time,
+                        facultyOccupied, facultyWorkload);
+                if (selectedFacultyId == null) continue;
+
+                Faculty selectedFaculty = facultyMap.get(selectedFacultyId);
+                if (selectedFaculty == null) continue;
+
+                // Room check
+                String rKey = "room:" + room.getId() + "-" + day + "-" + time;
                 if (roomOccupied.contains(rKey)) {
-                    // Try another room
                     Classroom altRoom = findAlternateRoom(availableRooms, day, time, roomOccupied);
                     if (altRoom == null) continue;
                     room = altRoom;
                     rKey = "room:" + room.getId() + "-" + day + "-" + time;
                 }
-                if (groupOccupied.contains(gKey)) continue;    // group busy
 
-                // ── Assign ──────────────────────────────────────────────
-                Timetable entry = new Timetable();
-                entry.setSubject(subject);
-                entry.setFaculty(faculty);
-                entry.setClassroom(room);
-                entry.setClassGroup(classGroup);
-                entry.setDayOfWeek(day);
-                entry.setTimeSlot(time);
-                entry.setSemester(semester);
+                // Group check
+                String gKey = "group:" + classGroup.getId() + "-" + day + "-" + time;
+                if (groupOccupied.contains(gKey)) continue;
 
-                schedule.add(entry);
-                facultyOccupied.add(fKey);
+                s.setAssignedFacultyId(selectedFacultyId);
+
+                Timetable t = new Timetable();
+                t.setSubject(s.getSubject());
+                t.setFaculty(selectedFaculty);
+                t.setClassroom(room);
+                t.setClassGroup(classGroup);
+                t.setDayOfWeek(day);
+                t.setTimeSlot(time);
+                t.setSemester(semester);
+
+                schedule.add(t);
+                facultyOccupied.add("faculty:" + selectedFacultyId + "-" + day + "-" + time);
                 roomOccupied.add(rKey);
                 groupOccupied.add(gKey);
                 classesPerDay.merge(day, 1, Integer::sum);
+                facultyWorkload.merge(selectedFacultyId, 1, Integer::sum);
                 assigned++;
             }
 
-            if (assigned < sessionsNeeded) {
-                log.warn("Could only assign {}/{} sessions for {} ({})",
-                         assigned, sessionsNeeded, subject.getName(), subject.getSubjectCode());
+            if (assigned < subjectSessions.size()) {
+                log.warn("Could only assign {}/{} theory sessions for {}",
+                        assigned, subjectSessions.size(),
+                        subjectSessions.get(0).getSubject().getSubjectCode());
             }
         }
 
         List<Timetable> saved = timetableRepository.saveAll(schedule);
-        log.info("Generated {} entries across {} days", saved.size(),
-                 saved.stream().map(Timetable::getDayOfWeek).distinct().count());
+        log.info("Generated {} entries ({} lab + {} theory) across {} days",
+                saved.size(),
+                labBlocks.values().stream().mapToInt(List::size).sum(),
+                independent.size(),
+                saved.stream().map(Timetable::getDayOfWeek).distinct().count());
         return saved;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  FACULTY SELECTION ALGORITHM (availability + load balancing)
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Build a list of (day, time) pairs ordered to spread sessions evenly.
-     * Pattern:  Mon-slot1, Tue-slot1, Wed-slot1 … Fri-slot1, Mon-slot2, …
-     * This prevents the greedy "fill Monday first" problem.
+     * Select the best faculty from the eligible pool for a single slot.
+     * 1. Filter to those FREE at (day, time)
+     * 2. Among free, pick the one with the LOWEST current workload
      */
+    private Long selectFaculty(List<Long> eligibleIds, String day, String time,
+                                Set<String> facultyOccupied,
+                                Map<Long, Integer> facultyWorkload) {
+        return eligibleIds.stream()
+                .filter(id -> !facultyOccupied.contains("faculty:" + id + "-" + day + "-" + time))
+                .min(Comparator.comparingInt(id -> facultyWorkload.getOrDefault(id, 0)))
+                .orElse(null);
+    }
+
+    /**
+     * Select the best faculty from the eligible pool for a consecutive block.
+     * The faculty must be free for ALL slots in the block.
+     */
+    private Long selectFacultyForBlock(List<Long> eligibleIds, String day,
+                                        List<String> timeSlots, int startIdx, int blockLen,
+                                        Set<String> facultyOccupied,
+                                        Map<Long, Integer> facultyWorkload) {
+        return eligibleIds.stream()
+                .filter(id -> {
+                    for (int j = 0; j < blockLen; j++) {
+                        String time = timeSlots.get(startIdx + j);
+                        if (facultyOccupied.contains("faculty:" + id + "-" + day + "-" + time)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .min(Comparator.comparingInt(id -> facultyWorkload.getOrDefault(id, 0)))
+                .orElse(null);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  HELPER METHODS
+    // ─────────────────────────────────────────────────────────────────────────
+
     private List<String[]> buildRoundRobinSlots(boolean enforceLunchBreak) {
         List<String[]> slots = new ArrayList<>();
         for (String time : TIME_SLOTS) {
-            // Skip the lunch break slot if enforced
             if (enforceLunchBreak && "12:00-13:00".equals(time)) continue;
             for (String day : DAYS) {
                 slots.add(new String[]{day, time});
@@ -210,10 +333,6 @@ public class SchedulingService {
         return slots;
     }
 
-    /**
-     * Pick the best classroom for a subject.
-     * Labs get LABORATORY rooms first; theory gets LECTURE_HALL first.
-     */
     private Classroom pickClassroom(Subject subject, List<Classroom> rooms) {
         if (subject.getType() == Subject.SubjectType.PRACTICAL) {
             return rooms.stream()
@@ -227,9 +346,6 @@ public class SchedulingService {
                 .orElse(rooms.get(0));
     }
 
-    /**
-     * Find an alternate room that is free at the given day/time.
-     */
     private Classroom findAlternateRoom(List<Classroom> rooms, String day,
                                          String time, Set<String> roomOccupied) {
         for (Classroom r : rooms) {
@@ -239,27 +355,27 @@ public class SchedulingService {
         return null;
     }
 
+    private Classroom findLabRoom(List<Classroom> rooms, String day,
+                                   String time, Set<String> roomOccupied) {
+        for (Classroom r : rooms) {
+            if (r.getType() == Classroom.RoomType.LABORATORY) {
+                String key = "room:" + r.getId() + "-" + day + "-" + time;
+                if (!roomOccupied.contains(key)) return r;
+            }
+        }
+        return findAlternateRoom(rooms, day, time, roomOccupied);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
-    //  2. DYNAMIC FACULTY LEAVE RESCHEDULING  (move-only, gap-aware)
+    //  2. DYNAMIC FACULTY LEAVE RESCHEDULING (Pool Substitution + Move)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Handle a faculty member going on leave for a specific day (or day+slot).
-     *
-     * Strategy (move-only):
-     *   1. Find all timetable entries for this faculty on the given day.
-     *   2. For each affected entry, REMOVE it from the leave day and find a
-     *      valid empty slot on a DIFFERENT day within the week.
-     *   3. The new placement must respect the studentGapHours constraint –
-     *      no day may exceed (TIME_SLOTS.length - studentGapHours) classes
-     *      for the same class group.
-     *   4. If no valid slot exists on any other day, return a user-friendly
-     *      error for that specific class.
-     *
-     * IMPORTANT: Only affected entries are modified.  The rest of the timetable
-     * remains completely untouched.
-     *
-     * @param studentGapHours Gap hours constraint (default 1 if ≤ 0)
+     * Handle faculty leave with Pool Substitution:
+     *   Step 1: Try to find a SUBSTITUTE from the subject's eligible pool
+     *           who is free at the SAME day/slot → no disruption to schedule.
+     *   Step 2: If no substitute, MOVE the session to a different day
+     *           (keeping the same faculty) → existing move logic.
      */
     @Transactional
     public List<String> handleFacultyLeave(Long facultyId, String day, String timeSlot,
@@ -267,13 +383,11 @@ public class SchedulingService {
         log.info("Handling faculty leave: facultyId={} day={} slot={} gapHours={}",
                  facultyId, day, timeSlot, studentGapHours);
 
-        // Clamp
         studentGapHours = Math.max(0, Math.min(studentGapHours, 3));
         int maxClassesPerDay = TIME_SLOTS.length - studentGapHours;
 
         List<String> actions = new ArrayList<>();
 
-        // Find the faculty entity
         Faculty leaveFaculty = facultyRepository.findById(facultyId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Faculty not found with ID: " + facultyId));
@@ -299,9 +413,6 @@ public class SchedulingService {
         Set<String> facultyOccupied = new HashSet<>();
         Set<String> roomOccupied    = new HashSet<>();
         Set<String> groupOccupied   = new HashSet<>();
-
-        // Count classes-per-day-per-group for gap enforcement
-        // Key: "groupId-DAY" → count
         Map<String, Integer> groupDayCount = new HashMap<>();
 
         for (Timetable t : allEntries) {
@@ -316,12 +427,24 @@ public class SchedulingService {
             groupDayCount.merge(gdKey, 1, Integer::sum);
         }
 
-        // ── Process each affected entry (MOVE to another day) ───────────
+        // ── Process each affected entry ─────────────────────────────────
         for (Timetable entry : affectedEntries) {
             String subjectName = entry.getSubject().getName();
             String originalSlot = entry.getDayOfWeek() + " " + entry.getTimeSlot();
-            Long groupId = entry.getClassGroup().getId();
 
+            // ── STEP 1: Try SUBSTITUTE from the eligible pool ───────────
+            boolean substituted = trySubstituteFromPool(entry, leaveFaculty,
+                    facultyOccupied);
+
+            if (substituted) {
+                actions.add("✓ " + subjectName + " (" + originalSlot + "): "
+                          + "Substituted with " + entry.getFaculty().getName()
+                          + " (from faculty pool)");
+                timetableRepository.save(entry);
+                continue;
+            }
+
+            // ── STEP 2: Fall back to MOVE to alternate day ──────────────
             boolean moved = tryMoveToAlternateDay(entry, leaveFaculty, day,
                     facultyOccupied, roomOccupied, groupOccupied,
                     groupDayCount, maxClassesPerDay);
@@ -332,7 +455,7 @@ public class SchedulingService {
                 timetableRepository.save(entry);
             } else {
                 actions.add("✗ " + subjectName + " (" + originalSlot + "): "
-                          + "No free slot available on any other day — manual intervention needed.");
+                          + "No substitute or free slot — manual intervention needed.");
             }
         }
 
@@ -346,10 +469,42 @@ public class SchedulingService {
     }
 
     /**
+     * Try to substitute the leave faculty with another member from the
+     * subject's eligible pool who is free at the SAME day/slot.
+     */
+    private boolean trySubstituteFromPool(Timetable entry, Faculty leaveFaculty,
+                                           Set<String> facultyOccupied) {
+        Subject subject = entry.getSubject();
+        Set<Faculty> pool = subject.getEligibleFaculty();
+        if (pool == null || pool.size() <= 1) return false;
+
+        String day = entry.getDayOfWeek();
+        String time = entry.getTimeSlot();
+
+        for (Faculty candidate : pool) {
+            if (candidate.getId().equals(leaveFaculty.getId())) continue;
+            if (!candidate.getAvailable()) continue;
+
+            String fKey = "faculty:" + candidate.getId() + "-" + day + "-" + time;
+            if (!facultyOccupied.contains(fKey)) {
+                // Found a free substitute!
+                // Update occupation tracking
+                String oldFKey = "faculty:" + leaveFaculty.getId() + "-" + day + "-" + time;
+                facultyOccupied.remove(oldFKey);
+                facultyOccupied.add(fKey);
+
+                entry.setFaculty(candidate);
+                log.info("Substituted {} with {} for {} at {} {}",
+                        leaveFaculty.getName(), candidate.getName(),
+                        subject.getSubjectCode(), day, time);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Move a class to a DIFFERENT day (never the leave day).
-     * Enforces:
-     *   – faculty / room / group conflict-free
-     *   – studentGapHours via maxClassesPerDay cap per class-group-day
      */
     private boolean tryMoveToAlternateDay(Timetable entry, Faculty faculty, String leaveDay,
                                            Set<String> facultyOccupied,
@@ -362,7 +517,6 @@ public class SchedulingService {
         for (String altDay : DAYS) {
             if (altDay.equals(leaveDay)) continue;
 
-            // ── Gap constraint: would this day exceed the limit? ────────
             String gdKey = groupId + "-" + altDay;
             int currentCount = groupDayCount.getOrDefault(gdKey, 0);
             if (currentCount >= maxClassesPerDay) continue;
@@ -376,7 +530,7 @@ public class SchedulingService {
                     !roomOccupied.contains(rKey) &&
                     !groupOccupied.contains(gKey)) {
 
-                    // ── Remove old occupation keys ──────────────────────
+                    // Remove old keys
                     String oldFKey = "faculty:" + faculty.getId()
                             + "-" + entry.getDayOfWeek() + "-" + entry.getTimeSlot();
                     String oldRKey = "room:" + entry.getClassroom().getId()
@@ -390,7 +544,7 @@ public class SchedulingService {
                     groupOccupied.remove(oldGKey);
                     groupDayCount.merge(oldGdKey, -1, Integer::sum);
 
-                    // ── Add new occupation keys ─────────────────────────
+                    // Add new keys
                     facultyOccupied.add(fKey);
                     roomOccupied.add(rKey);
                     groupOccupied.add(gKey);
@@ -406,7 +560,7 @@ public class SchedulingService {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  3. EXISTING QUERY METHODS  (unchanged)
+    //  3. EXISTING QUERY METHODS
     // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional
@@ -422,10 +576,6 @@ public class SchedulingService {
         return timetableRepository.findBySemester(semester);
     }
 
-    /**
-     * Returns all distinct (semester, section) pairs from the database
-     * as a list of maps with keys "semester" and "section".
-     */
     public List<Map<String, String>> getAvailableTimetables() {
         return timetableRepository.findDistinctSemesterSections().stream()
                 .map(row -> {
@@ -453,19 +603,9 @@ public class SchedulingService {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  4. MANUAL ADMIN OVERRIDE  (conflict-checked with force-save option)
+    //  4. MANUAL ADMIN OVERRIDE (conflict-checked with force-save option)
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Attempt to manually override a timetable entry.
-     * Returns a map with:
-     *   - "conflicts": List<String> of conflict descriptions (empty if none)
-     *   - "saved": boolean — true if the entry was saved
-     *   - "entry": summary of the saved entry (if saved)
-     *
-     * @param force  if true, save even when conflicts exist
-     * @param studentGapHours  gap constraint (default 1)
-     */
     @Transactional
     public Map<String, Object> adminOverride(Long entryId, Long newFacultyId,
                                               Long newClassroomId, String newDay,
@@ -477,13 +617,10 @@ public class SchedulingService {
         Timetable entry = timetableRepository.findById(entryId)
                 .orElseThrow(() -> new IllegalArgumentException("Timetable entry not found: " + entryId));
 
-        // Resolve new faculty and classroom
         Faculty newFaculty = facultyRepository.findById(newFacultyId)
                 .orElseThrow(() -> new IllegalArgumentException("Faculty not found: " + newFacultyId));
         Classroom newClassroom = classroomRepository.findById(newClassroomId)
                 .orElseThrow(() -> new IllegalArgumentException("Classroom not found: " + newClassroomId));
-
-        // ── Conflict detection ──────────────────────────────────────────
 
         // 1. Faculty double-booking
         List<Timetable> facultyConflicts = timetableRepository
@@ -519,7 +656,7 @@ public class SchedulingService {
                     + "\" at " + newDay + " " + newTimeSlot);
         }
 
-        // 4. Student gap hours constraint
+        // 4. Student gap hours
         studentGapHours = Math.max(0, Math.min(studentGapHours, 3));
         int maxClassesPerDay = TIME_SLOTS.length - studentGapHours;
         long currentCount = countGroupClassesOnDay(groupId, newDay, entryId);
@@ -531,7 +668,6 @@ public class SchedulingService {
 
         result.put("conflicts", conflicts);
 
-        // ── Save decision ───────────────────────────────────────────────
         if (conflicts.isEmpty() || force) {
             entry.setFaculty(newFaculty);
             entry.setClassroom(newClassroom);
@@ -561,7 +697,6 @@ public class SchedulingService {
         return result;
     }
 
-    /** Count how many classes a class-group has on a given day, excluding a specific entry. */
     private long countGroupClassesOnDay(Long groupId, String day, Long excludeEntryId) {
         return timetableRepository.findByClassGroupId(groupId).stream()
                 .filter(t -> t.getDayOfWeek().equals(day))

@@ -1,20 +1,73 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <title>Access Denied - AcadSched</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <style>
+        .access-denied-container {
+            text-align: center; padding: 80px 20px; max-width: 520px; margin: 0 auto;
+        }
+        .ad-icon {
+            font-size: 5rem; color: var(--danger, #ef4444); margin-bottom: 8px;
+            animation: adPulse 2s ease-in-out infinite;
+        }
+        @keyframes adPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .ad-code {
+            font-size: 4.5rem; font-weight: 800;
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin: 0; line-height: 1;
+        }
+        .ad-title {
+            font-size: 1.5rem; color: var(--text-primary, #f3f4f6);
+            margin: 12px 0 8px;
+        }
+        .ad-message {
+            color: var(--text-secondary, #aaa); margin: 0 0 32px;
+            font-size: 0.95rem; line-height: 1.6;
+        }
+        .ad-actions {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+        }
+    </style>
 </head>
 <body>
-    <div class="container" style="text-align: center; padding: 100px 20px;">
-        <div style="font-size: 5rem; color: var(--danger); margin-bottom: 8px;"><i class="ph ph-shield-warning"></i></div>
-        <h1 style="font-size: 4rem; color: var(--danger);">403</h1>
-        <h2>Access Denied</h2>
-        <p style="color: var(--text-secondary); margin: 12px 0;">You don't have permission to access this resource.</p>
-        <div style="margin-top: 30px; display: flex; gap: 12px; justify-content: center;">
-            <a th:href="@{/dashboard}" class="btn btn-primary">Go to Dashboard</a>
-            <a th:href="@{/}" class="btn btn-secondary">Go to Home</a>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a th:href="@{/}" class="nav-brand">AcadSched</a>
+            <ul class="nav-menu">
+                <li><a th:href="@{/dashboard}">Dashboard</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn-logout">Logout</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="access-denied-container">
+        <div class="ad-icon"><i class="ph ph-shield-warning"></i></div>
+        <p class="ad-code">403</p>
+        <h1 class="ad-title">Access Denied</h1>
+        <p class="ad-message">
+            You don't have permission to access this resource.
+            If you believe this is an error, please contact your system administrator.
+        </p>
+        <div class="ad-actions">
+            <a th:href="@{/dashboard}" class="btn btn-primary">
+                <i class="ph ph-arrow-left"></i> Go to Dashboard
+            </a>
+            <a th:href="@{/}" class="btn btn-secondary">
+                <i class="ph ph-house"></i> Go to Home
+            </a>
         </div>
     </div>
 </body>

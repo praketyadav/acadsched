@@ -8,8 +8,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,16 +18,17 @@ import java.util.Set;
 @Slf4j
 public class DataInitializer {
 
+    private final UserRepository userRepository;
+    private final FacultyRepository facultyRepository;
+    private final ClassroomRepository classroomRepository;
+    private final SubjectRepository subjectRepository;
+    private final ClassGroupRepository classGroupRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final TransactionTemplate transactionTemplate;
+
     @Bean
-    CommandLineRunner initDatabase(
-            UserRepository userRepository,
-            FacultyRepository facultyRepository,
-            ClassroomRepository classroomRepository,
-            SubjectRepository subjectRepository,
-            ClassGroupRepository classGroupRepository,
-            PasswordEncoder passwordEncoder) {
-        
-        return args -> {
+    CommandLineRunner initDatabase() {
+        return args -> transactionTemplate.executeWithoutResult(status -> {
             try {
                 // Only initialize if database is empty
                 if (userRepository.count() > 0) {
@@ -58,16 +59,8 @@ public class DataInitializer {
                 facultyUser.setEnabled(true);
                 userRepository.save(facultyUser);
 
-                // Create Student User
-                User student = new User();
-                student.setUsername("student1");
-                student.setPassword(passwordEncoder.encode("student123"));
-                student.setEmail("student1@acadsched.com");
-                student.setFullName("Jane Doe");
-                student.setRole(User.Role.STUDENT);
-                student.setEnabled(true);
-                userRepository.save(student);
-                log.info("Created sample users");
+                // Student user created after class groups (needs classGroup reference)
+                log.info("Created admin and faculty users");
 
                 // Create Faculty Members
                 Faculty faculty1 = new Faculty();
@@ -81,7 +74,7 @@ public class DataInitializer {
                 availability1.add("MONDAY-09:00-10:00");
                 availability1.add("TUESDAY-10:00-11:00");
                 faculty1.setAvailableTimeSlots(availability1);
-                facultyRepository.save(faculty1);
+                faculty1 = facultyRepository.save(faculty1);
 
                 Faculty faculty2 = new Faculty();
                 faculty2.setName("Dr. Sarah Johnson");
@@ -90,7 +83,7 @@ public class DataInitializer {
                 faculty2.setEmail("sarah.johnson@acadsched.com");
                 faculty2.setPhoneNumber("+1234567891");
                 faculty2.setAvailable(true);
-                facultyRepository.save(faculty2);
+                faculty2 = facultyRepository.save(faculty2);
 
                 Faculty faculty3 = new Faculty();
                 faculty3.setName("Prof. Michael Brown");
@@ -99,7 +92,7 @@ public class DataInitializer {
                 faculty3.setEmail("michael.brown@acadsched.com");
                 faculty3.setPhoneNumber("+1234567892");
                 faculty3.setAvailable(true);
-                facultyRepository.save(faculty3);
+                faculty3 = facultyRepository.save(faculty3);
                 log.info("Created sample faculty members");
 
                 // Create Classrooms
@@ -148,7 +141,7 @@ public class DataInitializer {
                 cse3rdYear.setSection("A");
                 cse3rdYear.setStudentStrength(60);
                 cse3rdYear.setActive(true);
-                classGroupRepository.save(cse3rdYear);
+                cse3rdYear = classGroupRepository.save(cse3rdYear);
 
                 ClassGroup ece4thYear = new ClassGroup();
                 ece4thYear.setName("ECE 4th Year");
@@ -169,14 +162,35 @@ public class DataInitializer {
                 classGroupRepository.save(mech2ndYear);
                 log.info("Created sample class groups");
 
-                // Create Subjects
+                // ── Create Student User (assigned to CSE 3rd Year) ──────
+                User student = new User();
+                student.setUsername("student1");
+                student.setPassword(passwordEncoder.encode("student123"));
+                student.setEmail("student1@acadsched.com");
+                student.setFullName("Jane Doe");
+                student.setRole(User.Role.STUDENT);
+                student.setClassGroup(cse3rdYear);
+                student.setEnabled(true);
+                userRepository.save(student);
+                log.info("Created student user → assigned to ClassGroup '{}'", cse3rdYear.getName());
+
+                // ── Link faculty user to Faculty entity ─────────────────
+                facultyUser.setFaculty(faculty1);
+                userRepository.save(facultyUser);
+                log.info("Linked faculty user '{}' → Faculty '{}'",
+                        facultyUser.getUsername(), faculty1.getName());
+
+                // Create Subjects (with eligible faculty pools)
+                // All entities are managed within this transaction,
+                // so the ManyToMany cascade works correctly.
                 Subject subject1 = new Subject();
                 subject1.setSubjectCode("CS101");
                 subject1.setName("Introduction to Programming");
                 subject1.setCredits(4);
                 subject1.setDepartment("Computer Science");
                 subject1.setSemester("Fall 2024");
-                subject1.setFaculty(faculty1);
+                subject1.getEligibleFaculty().add(faculty1);
+                subject1.getEligibleFaculty().add(faculty2);
                 subject1.setPriority(5);
                 subject1.setType(Subject.SubjectType.THEORY);
                 subjectRepository.save(subject1);
@@ -187,7 +201,7 @@ public class DataInitializer {
                 subject2.setCredits(4);
                 subject2.setDepartment("Computer Science");
                 subject2.setSemester("Fall 2024");
-                subject2.setFaculty(faculty1);
+                subject2.getEligibleFaculty().add(faculty1);
                 subject2.setPriority(4);
                 subject2.setType(Subject.SubjectType.THEORY);
                 subjectRepository.save(subject2);
@@ -198,7 +212,8 @@ public class DataInitializer {
                 subject3.setCredits(3);
                 subject3.setDepartment("Computer Science");
                 subject3.setSemester("Fall 2024");
-                subject3.setFaculty(faculty2);
+                subject3.getEligibleFaculty().add(faculty2);
+                subject3.getEligibleFaculty().add(faculty3);
                 subject3.setPriority(3);
                 subject3.setType(Subject.SubjectType.THEORY);
                 subjectRepository.save(subject3);
@@ -209,7 +224,7 @@ public class DataInitializer {
                 subject4.setCredits(4);
                 subject4.setDepartment("Mathematics");
                 subject4.setSemester("Fall 2024");
-                subject4.setFaculty(faculty3);
+                subject4.getEligibleFaculty().add(faculty3);
                 subject4.setPriority(4);
                 subject4.setType(Subject.SubjectType.THEORY);
                 subjectRepository.save(subject4);
@@ -220,7 +235,8 @@ public class DataInitializer {
                 subject5.setCredits(2);
                 subject5.setDepartment("Computer Science");
                 subject5.setSemester("Fall 2024");
-                subject5.setFaculty(faculty1);
+                subject5.getEligibleFaculty().add(faculty1);
+                subject5.getEligibleFaculty().add(faculty2);
                 subject5.setPriority(3);
                 subject5.setType(Subject.SubjectType.PRACTICAL);
                 subjectRepository.save(subject5);
@@ -232,9 +248,9 @@ public class DataInitializer {
                 log.info("Faculty - username: faculty1, password: faculty123");
                 log.info("Student - username: student1, password: student123");
             } catch (Exception e) {
-                log.error("Error during database initialization: {}", e.getMessage());
+                log.error("Error during database initialization: {}", e.getMessage(), e);
                 log.warn("Continuing without sample data initialization");
             }
-        };
+        });
     }
 }

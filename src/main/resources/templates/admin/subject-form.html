@@ -55,11 +55,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="faculty">Assign Faculty</label>
-                    <select id="faculty" th:field="*{faculty}">
-                        <option value="">Select Faculty</option>
-                        <option th:each="f : ${faculties}" th:value="${f.id}" th:text="${f.name}"></option>
+                    <label for="eligibleFaculty">Eligible Faculty Pool</label>
+                    <select id="eligibleFaculty" th:field="*{eligibleFaculty}" multiple
+                            style="min-height: 120px;">
+                        <option th:each="f : ${faculties}" th:value="${f.id}" th:text="${f.name + ' (' + f.department + ')'}"></option>
                     </select>
+                    <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
+                        Hold Ctrl/Cmd to select multiple faculty members
+                    </small>
                 </div>
 
                 <div class="form-group">
